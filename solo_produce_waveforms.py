@@ -50,7 +50,7 @@ def main(target_input_cdf,
     else:
         
         #TBD padding of the data, according to what has to be done
-        #TBD save the data as .txt, resampled to 16384
+        #TBD save the data as .txt, resampled to 16384, to the right folder based on QUALITY_FACT
         
         
         
