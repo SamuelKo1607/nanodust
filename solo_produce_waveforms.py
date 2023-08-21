@@ -4,6 +4,10 @@ sys.path.insert(0, 'C:\\Users\\skoci\\Documents\\dust\\000_commons')
 sys.path.insert(0, 'C:\\Users\\skoci\\Documents\\dust\\003_solar_orbiter')
 import cdflib
 import csv
+import glob
+import matplotlib.pyplot as plt
+from scipy import signal as signal
+
 
 
 def stats(targetFileName,
@@ -27,6 +31,45 @@ def stats(targetFileName,
         f.write(message)
         f.close()
 
+def pad(wf,where_to_start):
+    """
+    A function to pad the given array and return an array of double the lenght. 
+
+    Parameters
+    ----------
+    wf : array of number
+        An array to be padded.
+    where_to_start : int
+        There in the array of double length will the original data start.
+
+    Returns
+    -------
+    wf_padded : array of number
+        The padded array.
+    """
+    
+    #noise background
+    wf_padded = np.random.normal(np.mean(wf),np.std(wf),2*len(wf))
+    
+    #softened signal
+    softening_mask = np.hstack((np.arange(0,1,0.1),
+                                np.ones(len(wf)-20),
+                                np.arange(0.9,-0.1,-0.1)))
+    wf_soft = wf*softening_mask
+    
+    #inverse softening mask to cut out a part of the noise
+    mask = range(where_to_start,where_to_start+len(wf))
+    wf_padded[mask] *= 1-softening_mask
+    
+    #sum
+    wf_padded[mask] += wf_soft
+    
+    return wf_padded
+    
+    
+def subsample(wf):
+    return signal.resample(wf,16384)
+    
 
 def main(target_input_cdf,
          target_output_stats):
@@ -54,7 +97,7 @@ def main(target_input_cdf,
     else:
         file_report = ""
         #for each waveform
-        for i in len(e):
+        for i in range(len(e)):
             #only if data is XLD1
             if sw>=211 and min(channel_ref[i]==[13, 21, 20])==1:
                 
@@ -85,26 +128,39 @@ def main(target_input_cdf,
             #add line of the stats file
             file_report += str(i).zfill(4)+" "+treatment+"\n"    
             
+            ch0 = e[i][0]
+            ch1 = e[i][1]
+            ch2 = e[i][2]
+            
             #padding with noise
             if "pad" in treatment:
-                pass #define function
+                # the three channels are supposed to be padded symmetrically
+                start_orig_data = np.random.choice(np.arange(0,len(e[i][0])))
+                
+                ch0 = pad(ch0,start_orig_data)
+                ch1 = pad(ch1,start_orig_data)
+                ch2 = pad(ch2,start_orig_data)
             
             #resampling to 16384 samples
             if "subsample" in treatment:
-                pass #define function
-            
+                
+                ch0 = subsample(ch0)
+                ch1 = subsample(ch1)
+                ch2 = subsample(ch2)
 
             #TBD save the processed data as .csv
-            with open(folder+YYYYMMDD+"_"+str(i).zfill(4).csv, 'w', encoding='UTF8') as f:
+            with open(folder+YYYYMMDD+"_"+str(i).zfill(4)+".csv", 'w', encoding='UTF8') as f:
                 writer = csv.writer(f)
         
                 # write the data row by row
                 # for something in something:
-                writer.writerow(row)
+                for j in range(len(ch0)):
+                    writer.writerow((ch0[j],ch1[j],ch2[j]))
         
         
         stats(target_output_stats,file_report)
-   
+        # perhaps add one more, total report? 
+        # I will not be able to search through these otherwise
 
 
 
