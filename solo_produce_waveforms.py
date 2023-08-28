@@ -31,6 +31,7 @@ def stats(targetFileName,
         f.write(message)
         f.close()
 
+
 def pad(wf,where_to_start):
     """
     A function to pad the given array and return an array of double the lenght. 
@@ -122,53 +123,46 @@ def main(target_input_cdf,
                     treatment = "subsample"
                 else:
                     treatment = "report: " + str(len(e[i][0])) + str(sampling_rate[i])
+            
+                ch0 = e[i][0]
+                ch1 = e[i][1]
+                ch2 = e[i][2]
+                
+                #padding with noise
+                if "pad" in treatment:
+                    # the three channels are supposed to be padded symmetrically
+                    start_orig_data = np.random.choice(np.arange(0,len(e[i][0])))
+                    
+                    ch0 = pad(ch0,start_orig_data)
+                    ch1 = pad(ch1,start_orig_data)
+                    ch2 = pad(ch2,start_orig_data)
+                
+                #resampling to 16384 samples
+                if "subsample" in treatment:
+                    
+                    ch0 = subsample(ch0)
+                    ch1 = subsample(ch1)
+                    ch2 = subsample(ch2)
+    
+                #save the processed data as .csv
+                if "subsample" in treatment:
+                    with open(folder+YYYYMMDD+"_"+str(i).zfill(4)+".csv", 'w', encoding='UTF8') as f:
+                        writer = csv.writer(f)
+                
+                        # write the data row by row
+                        for j in range(len(ch0)):
+                            writer.writerow((ch0[j],ch1[j],ch2[j]))
+            
             else:
                 treatment = "report: " + str(sw) + str(channel_ref[i])
-            
+                
             #add line of the stats file
-            file_report += str(i).zfill(4)+" "+treatment+"\n"    
-            
-            ch0 = e[i][0]
-            ch1 = e[i][1]
-            ch2 = e[i][2]
-            
-            #padding with noise
-            if "pad" in treatment:
-                # the three channels are supposed to be padded symmetrically
-                start_orig_data = np.random.choice(np.arange(0,len(e[i][0])))
-                
-                ch0 = pad(ch0,start_orig_data)
-                ch1 = pad(ch1,start_orig_data)
-                ch2 = pad(ch2,start_orig_data)
-            
-            #resampling to 16384 samples
-            if "subsample" in treatment:
-                
-                ch0 = subsample(ch0)
-                ch1 = subsample(ch1)
-                ch2 = subsample(ch2)
-
-            #TBD save the processed data as .csv
-            with open(folder+YYYYMMDD+"_"+str(i).zfill(4)+".csv", 'w', encoding='UTF8') as f:
-                writer = csv.writer(f)
-        
-                # write the data row by row
-                # for something in something:
-                for j in range(len(ch0)):
-                    writer.writerow((ch0[j],ch1[j],ch2[j]))
-        
+            file_report += str(i).zfill(4)+" "+treatment+"\n"
         
         stats(target_output_stats,file_report)
-        # perhaps add one more, total report? 
-        # I will not be able to search through these otherwise
+        
+        # would bbe nice to add a total report, but for that we 
+        # need to aggregate the report files, I need that to search globally
 
 
-
-
-
-
-
-
-
-   
-#main(sys.argv[1],sys.argv[2])    
+main(sys.argv[1],sys.argv[2])    
