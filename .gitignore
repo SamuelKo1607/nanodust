@@ -2,3 +2,4 @@ __pycache__
 /9*
 /.snakemake
 keys.py
+ephemeris_noheader.txt
