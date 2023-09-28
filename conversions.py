@@ -112,3 +112,6 @@ def YYYYMMDD2date(YYYYMMDD):
     month = int(YYYYMMDD[4:6])
     day = int(YYYYMMDD[6:8])
     return dt.datetime(year,month,day)
+
+def YYYYMMDD2jd(YYYYMMDD):
+    return date2jd(YYYYMMDD2date(YYYYMMDD))
