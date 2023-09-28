@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import matplotlib as mpl
 import glob
 import numpy as np
 import datetime as dt
@@ -6,6 +8,15 @@ import datetime as dt
 from solo_load_days import load_list
 from solo_load_days import Impact
 from solo_load_days import Day
+from conversions import jd2date
+import figure_standards as figstd
+
+axes_size = figstd.set_rcparams_dynamo(mpl.rcParams, num_cols=1, ls='thin')
+mpl.rcParams['figure.dpi']= 600
+
+
+apo_jd = 2459000.5+np.array([134,368,566,765,954,1134])
+peri_jd = 2459000.5+np.array([255,470,666,865,1045,1224])
 
 
 def load_all_days(days_location = "998_generated\\days\\"):
@@ -27,8 +38,37 @@ def plot_flux(days):
         counts = np.append(counts,day.impact_count)
         duty_hours = np.append(duty_hours, day.duty_hours)
 
-    plt.scatter(dates,counts/duty_hours*24)
-    plt.show()
+    fig, ax = plt.subplots(figsize=(3.8, 3))
+    ax.set_ylabel("Impact rate (duty-cycle corrected) [$day^{-1}$]"
+                  , fontsize="medium")
+    ax.set_title('CNN Dust Impacts: '+str(np.round(sum(counts)))[:-2]
+                 , fontsize="medium", fontweight="bold")
+    ax.tick_params(axis='x',labeltop=False,labelbottom=True)
+    ax.tick_params(axis='y',labelleft=True,labelright=False)
+    ax.tick_params(axis='y',which="minor",left=True,right=False)
+    ax.scatter(dates,counts/duty_hours*24,
+               color="maroon", s=1,zorder=100)
+    #ax.errorbar(flux_date, flux_cnn, err_plusminus_flux_cnn,
+    #            color="firebrick", lw=0, elinewidth=0.4,alpha=0.35,zorder=100)
+    ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1, 3, 5, 7, 9, 11)))
+    ax.xaxis.set_minor_locator(mdates.MonthLocator())
+    ax.set_ylim(bottom = 0, top = 1000)
+    ax.set_xlim(left = min(dates), right = max(dates))
+    ax.tick_params(axis='x',which="minor",bottom=True,top=True)
+    ax.tick_params(axis='x',labelrotation=60)
+    ax.tick_params(labelsize="medium")
+    ax.set_ylim(0,1000)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    for jd in apo_jd:
+        ax.axvline(x=jd2date(jd),color="darkgray",lw=0.7)
+    for jd in peri_jd:
+        ax.axvline(x=jd2date(jd),color="darkgray",ls="--",lw=0.7)
+    ax.text(.85, .96, 'Aphelion', ha='left', va='top', rotation=90, color="gray", fontsize="small", transform=ax.transAxes)
+    ax.text(.74, .96, 'Perihelion', ha='left', va='top', rotation=90, color="gray", fontsize="small", transform=ax.transAxes)
+    fig.tight_layout()
+    fig.savefig('cnn_flux.png', format='png', dpi=600)
+    fig.show()
+
 
 
 plot_flux(load_all_days())
