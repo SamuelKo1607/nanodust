@@ -9,7 +9,7 @@ from scipy.signal import sosfilt
 
 from conversions import tt2000_to_date
 from conversions import YYYYMMDD2jd
-from solo_ephemeris import fetch_heliocentric
+from nano_ephemeris import fetch_heliocentric
 
 from keys import cdf_stat_location
 from keys import cdf_tswf_e_location
@@ -29,6 +29,7 @@ class Impact:
         self.datetime = datetime
         self.sampling_rate = sampling_rate
         self.amplitude = amplitude
+        self.produced = dt.datetime.now()
 
 
     def info(self):
@@ -45,6 +46,7 @@ class Day:
                  date,
                  impact_count,
                  duty_hours,
+                 sampling_rate,
                  heliocentric_distance,
                  spacecraft_speed,
                  heliocentric_radial_speed):
@@ -52,9 +54,11 @@ class Day:
         self.YYYYMMDD = date.strftime('%Y%m%d')
         self.impact_count = impact_count
         self.duty_hours = duty_hours
+        self.sampling_rate = sampling_rate
         self.heliocentric_distance = heliocentric_distance
         self.spacecraft_speed = spacecraft_speed
         self.heliocentric_radial_speed = heliocentric_radial_speed
+        self.produced = dt.datetime.now()
 
 
     def info(self):
@@ -433,7 +437,7 @@ def process_cdf(cdf_file):
         print("day construction failed @ "+YYYYMMDD)
         raise err
     else:
-        day = Day(date,n,duty_hours,r,v,v_rad)
+        day = Day(date,n,duty_hours,sampling_rate[0],r,v,v_rad)
 
     return day, impacts, missing_files
 
