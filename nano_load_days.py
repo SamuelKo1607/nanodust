@@ -117,11 +117,6 @@ def load_list(name,location):
     return data
 
 
-def download_available_cdf(strat_date, end_date):
-    #TODO, use Soar this time, please
-    pass
-
-
 def get_cdfs_to_analyze(cdf_files_directory):
     """
     Returns the list of triggered snapshot E-field 
@@ -361,7 +356,7 @@ def process_cdf(cdf_file):
     quality_fact = cdf_file.varget("QUALITY_FACT")
     channel_ref = cdf_file.varget("CHANNEL_REF")
     sampling_rate = cdf_file.varget("SAMPLING_RATE")
-    sw = cdf_file.attget("Software_version",entry=0)["Data"]
+    sw = cdf_file.attget("Software_version",entry=0).Data
     YYYYMMDD = str(cdf_file.file)[-16:-8]
 
     events_count = np.shape(e)[0]
