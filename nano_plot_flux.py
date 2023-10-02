@@ -148,12 +148,11 @@ def plot_flux(days, figures_location = "998_generated\\figures\\"):
                     c=color, lw=0, elinewidth=0.4,alpha=0.35,zorder=100)
     ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1, 3, 5, 7, 9, 11)))
     ax.xaxis.set_minor_locator(mdates.MonthLocator())
-    ax.set_ylim(bottom = 0, top = 1000)
     ax.set_xlim(left = min(dates), right = max(dates))
     ax.tick_params(axis='x',which="minor",bottom=True,top=True)
     ax.tick_params(axis='x',labelrotation=60)
     ax.tick_params(labelsize="medium")
-    ax.set_ylim(0,1000)
+    ax.set_ylim(0,1400)
     ax.tick_params(labelleft=True,
                    labelright=True,
                    labelbottom = True,
