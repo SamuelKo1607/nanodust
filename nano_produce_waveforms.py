@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import sys
 sys.path.insert(0, 'C:\\Users\\skoci\\Documents\\dust\\000_commons')
 sys.path.insert(0, 'C:\\Users\\skoci\\Documents\\dust\\003_solar_orbiter')
@@ -69,8 +70,60 @@ def pad(wf,where_to_start):
     
     
 def subsample(wf):
-    return signal.resample(wf,16384)
+    """
+    A wrapper to do the right subsampling that fits our needs.
+
+    Parameters
+    ----------
+    wf : np.array of float
+        The signal to be subsampled.
+
+    Returns
+    -------
+    resampled
+        The subsampled signal.
+
+    """
+    resampled = signal.resample(wf,16384)
+    return resampled
     
+
+def plot_and_save(wfs,name,location="998_generated\\waveforms\\TDS_other\\"):
+    """
+    A simple plotting (and saving) of the data.
+    
+    Parameters
+    ----------
+    wfs: list of np.array
+        the time series to plot
+
+    name: str
+        The same name as .csv files that are generated.
+
+    location : str, optional
+        Directory of the files with padded XLD1 data. 
+        The default is "998_generated\\waveforms\\TDS_other\\".
+    
+    Returns
+    -------
+    None
+    """
+
+    mono_1 = wfs[0]
+    mono_2 = wfs[1]
+    mono_3 = wfs[2]
+
+    ylim = np.max(np.hstack(( mono_1,mono_2,mono_3 )).ravel())
+
+    fig,ax = plt.subplots(nrows=3,sharex=True)
+    ax[0].plot(mono_1,lw=0.1)
+    ax[1].plot(mono_2,lw=0.1)
+    ax[2].plot(mono_3,lw=0.1)
+    for ax in ax:
+        ax.set_ylim(-ylim,ylim)
+    fig.savefig(location+"plots\\"+name+".png", format='png', dpi=600)
+    plt.close()
+
 
 def main(target_input_cdf,
          target_output_stats):
@@ -152,7 +205,11 @@ def main(target_input_cdf,
                         # write the data row by row
                         for j in range(len(ch0)):
                             writer.writerow((ch0[j],ch1[j],ch2[j]))
-            
+
+                        plot_and_save(wfs=[ch0,ch1,ch2],
+                                      name=YYYYMMDD+"_"+str(i).zfill(4),
+                                      location=folder)
+
             else:
                 treatment = "report: " + str(sw) + str(channel_ref[i])
                 
