@@ -9,11 +9,13 @@ from scipy.signal import sosfilt
 
 from conversions import tt2000_to_date
 from conversions import YYYYMMDD2jd
+from conversions import YYYYMMDD2date
 from nano_ephemeris import fetch_heliocentric
 
 from keys import cdf_stat_location
 from keys import cdf_tswf_e_location
 from keys import lo_f_cat_location
+from keys import lo_f_cat_new_location
 from keys import hi_f_cat_location
 from keys import solo_ephemeris_file
 
@@ -331,8 +333,9 @@ def process_cdf(cdf_file):
     """
     The function to process one CDF file. Depending on whther it is 
     the higher or the lower sampling rate, the correct decision dust/nodust 
-    is done. List of Impact instances and the list of 
-    missing files are returned.
+    is done. Different approach is taken for CNN files 
+    before 2022 11 24 (incl) and after. List of Impact instances 
+    and the list of missing files are returned.
 
     Parameters
     ----------
@@ -370,20 +373,49 @@ def process_cdf(cdf_file):
     if all_close and is_xld and is_current and np.isclose(sampling_rate[0],
                                                           262137.5):
         #lower sampling rate, process and append impacts with Impact object
-        cnn_file_name_pattern = (lo_f_cat_location+
-                                 "solo_L2_rpw-tds-surv-tswf-e_"+
-                                 str(cdf_file.file)[-16:-6]+"*.txt")
-        cnn_file_name = glob.glob(cnn_file_name_pattern)
-        if len(cnn_file_name) == 0:
-            missing_files += cnn_file_name_pattern
+
+        if YYYYMMDD2date(YYYYMMDD) <= YYYYMMDD2date("20221124"):
+            #legacy
+            cnn_file_name_pattern = (lo_f_cat_location+
+                                     "solo_L2_rpw-tds-surv-tswf-e_"+
+                                     str(cdf_file.file)[-16:-6]+"*.txt")
+            cnn_file_name = glob.glob(cnn_file_name_pattern)
+            if len(cnn_file_name) == 0:
+                missing_files += cnn_file_name_pattern
+            else:
+                cnn_classification = pd.read_csv(cnn_file_name[0])
+                plain_index = np.arange(events_count)
+                flagged_dust = quality_fact==65535
+                reordered_index = np.append(plain_index[flagged_dust==1],plain_index[flagged_dust==0])
+                dust = np.array(cnn_classification["Label"])
+                dust = np.array(dust, dtype=bool)
+                indices_analyzed = np.array(cnn_classification["Index"])[dust]-1
+                try:
+                    indices = reordered_index[indices_analyzed]
+                except:
+                    raise Exception("non-classified data @ "+
+                                    str(cdf_file.file)[-16:-4])
+                else:
+                    for i in indices:
+                        impact = process_impact(cdf_file, i)
+                        impacts.append(impact)
+
         else:
-            cnn_classification = pd.read_csv(cnn_file_name[0])
+            #new version as of oct/2023
+            cnn_files_pattern = (lo_f_cat_new_location+
+                                     "solo_L2_rpw-tds-surv-tswf-e_"+
+                                     YYYYMMDD+"*.txt")
+            cnn_files = glob.glob(cnn_files_pattern)
+            if len(cnn_files) == 0:
+                missing_files += cnn_files_pattern
+            indices_analyzed = np.zeros(0,dtype=int)
+            for cnn_file in cnn_files:
+                indices_analyzed = np.append(indices_analyzed, int(cnn_file[-7:-4]))
+            indices_analyzed -= 1 #because matlab
+
             plain_index = np.arange(events_count)
             flagged_dust = quality_fact==65535
             reordered_index = np.append(plain_index[flagged_dust==1],plain_index[flagged_dust==0])
-            dust = np.array(cnn_classification["Label"])
-            dust = np.array(dust, dtype=bool)
-            indices_analyzed = np.array(cnn_classification["Index"])[dust]-1
             try:
                 indices = reordered_index[indices_analyzed]
             except:
