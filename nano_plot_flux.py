@@ -162,8 +162,10 @@ def plot_flux(days, figures_location = "998_generated\\figures\\"):
         ax.axvline(x=jd2date(jd),color="darkgray",lw=0.7)
     for jd in peri_jd:
         ax.axvline(x=jd2date(jd),color="darkgray",ls="--",lw=0.7)
-    ax.text(.85, .96, 'Aphelion', ha='left', va='top', rotation=90, color="gray", fontsize="small", transform=ax.transAxes)
+    ax.text(.82, .96, 'Aphelion', ha='left', va='top', rotation=90, color="gray", fontsize="small", transform=ax.transAxes)
     ax.text(.74, .96, 'Perihelion', ha='left', va='top', rotation=90, color="gray", fontsize="small", transform=ax.transAxes)
+    ax.text(.07, .92, r'$f_s = 262 \, ksps$', ha='left', va='top', color="firebrick", backgroundcolor="white", transform=ax.transAxes)
+    ax.text(.07, .83, r'$f_s = 524 \, ksps$', ha='left', va='top', color="teal", backgroundcolor="white", transform=ax.transAxes)
     fig.tight_layout()
     fig.savefig(figures_location+'cnn_flux.png', format='png', dpi=600)
     fig.show()
