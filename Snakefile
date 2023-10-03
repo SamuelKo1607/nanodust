@@ -29,5 +29,5 @@ rule generate_stats:
     conda: 'environment.yml'
     shell:
         """
-        python solo_produce_waveforms.py "{input.data}" "{output.stats}"
+        python nano_produce_waveforms.py "{input.data}" "{output.stats}"
         """
