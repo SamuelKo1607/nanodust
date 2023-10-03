@@ -109,9 +109,9 @@ def plot_and_save(wfs,name,location="998_generated\\waveforms\\TDS_other\\"):
     None
     """
 
-    mono_1 = wfs[0]
-    mono_2 = wfs[1]
-    mono_3 = wfs[2]
+    mono_1 = wfs[2] - wfs[1]
+    mono_2 = wfs[2]
+    mono_3 = wfs[2] - wfs[1] - wfs[0]
 
     ylim = np.max(np.hstack(( mono_1,mono_2,mono_3 )).ravel())
 
@@ -126,7 +126,8 @@ def plot_and_save(wfs,name,location="998_generated\\waveforms\\TDS_other\\"):
 
 
 def main(target_input_cdf,
-         target_output_stats):
+         target_output_stats,
+         plot = False):
     
     #path = "C:\\Users\\skoci\\Disk Google\\000 škola\\UIT\\getting data\\solo\\rpw\\tds_wf_e"
     #cdfs = glob.glob(path+"\\*L2*tswf-e*.cdf")
@@ -139,7 +140,7 @@ def main(target_input_cdf,
         e = cdf_file_e.varget("WAVEFORM_DATA_VOLTAGE") #[event,channel,time], channel = 2 is monopole in XLD1
         epoch = cdf_file_e.varget("EPOCH")              #start of each impact
         epoch_offset = cdf_file_e.varget("EPOCH_OFFSET")     #time variable for each sample of each impact
-        sw = cdf_file_e.attget("Software_version",entry=0)["Data"]    #should be 2.1.1 or higher
+        sw = cdf_file_e.attget("Software_version",entry=0).Data    #should be 2.1.1 or higher
         sw = int(sw.replace(".",""))
         channel_ref = cdf_file_e.varget("CHANNEL_REF")  #should be xld1-like
         sampling_rate = cdf_file_e.varget("SAMPLING_RATE")    
@@ -189,7 +190,7 @@ def main(target_input_cdf,
                     ch0 = pad(ch0,start_orig_data)
                     ch1 = pad(ch1,start_orig_data)
                     ch2 = pad(ch2,start_orig_data)
-                
+
                 #resampling to 16384 samples
                 if "subsample" in treatment:
                     
@@ -206,9 +207,10 @@ def main(target_input_cdf,
                         for j in range(len(ch0)):
                             writer.writerow((ch0[j],ch1[j],ch2[j]))
 
-                        plot_and_save(wfs=[ch0,ch1,ch2],
-                                      name=YYYYMMDD+"_"+str(i).zfill(4),
-                                      location=folder)
+                        if plot:
+                            plot_and_save(wfs=[ch0,ch1,ch2],
+                                          name=YYYYMMDD+"_"+str(i).zfill(4),
+                                          location=folder)
 
             else:
                 treatment = "report: " + str(sw) + str(channel_ref[i])
