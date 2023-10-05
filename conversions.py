@@ -3,8 +3,11 @@ import calendar
 import datetime as dt
 from spacepy import pycdf
 
-def zrot(th): #in degrees
-    thrad = np.radians(th)
+def zrot(th,rad=False): #in degrees
+    if rad:
+        thrad = th
+    else:
+        thrad = np.radians(th)
     c, s = np.cos(thrad), np.sin(thrad)
     return np.array(((c, -s, 0), (s, c, 0), (0,0,1)))
 
@@ -61,6 +64,19 @@ def test_gse2gae():
     for time in [0,100,1e7]:
         testsum += sum(gse2gae([0,0,0],time))
     assert abs(testsum)<1e6
+
+def hae2vse(hae_target,hae_venus):
+    #heliocentric aries eclyptic to venerocentric solar eclyptic
+    hae_target = np.array(hae_target)
+    hae_venus = np.array(hae_venus)
+    vae = hae_target - hae_venus
+    if hae_venus[0]>0:
+        theta = np.arctan(hae_venus[1]/hae_venus[0]) #rad
+    else:
+        theta = np.arctan(hae_venus[1]/hae_venus[0])+np.pi
+    rotation_matrix = zrot(-theta,rad=True)
+    vse = np.matmul(rotation_matrix,vae)
+    return vse
 
 def tt2000_to_date(epoch): #some adapted C routine
     x=pycdf.Library()
