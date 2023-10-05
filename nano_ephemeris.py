@@ -64,6 +64,28 @@ def load_ephemeris(ephemeris_file):
         return time, hae_r, hae_v, hae_phi, radial_v, tangential_v, hae_theta
 
 
+def load_hae(ephemeris_file):
+    """
+    A wrapper to return a table of tiems and HAEs for the given ephemeris file.
+    Uses load_ephemeris().
+
+    Parameters
+    ----------
+    ephemeris_file : str
+        The ephemeris file to access.
+
+    Returns
+    -------
+    jd : np.array of float
+        Times in jd.
+    hae/au : np.array of float
+        HAE positions in AU.
+
+    """
+    jd, hae, hae_v, hae_phi, radial_v, tangential_v, hae_theta = load_ephemeris(ephemeris_file)
+    return jd, hae/au
+
+
 def fetch_heliocentric(file):
     """
     This function returns helicoentric distance & phase, in addition to 
