@@ -119,6 +119,53 @@ def load_list(name,location):
     return data
 
 
+def load_all_days(days_location = "998_generated\\days\\"):
+    """
+    The function to load all the measurement days data.
+
+    Parameters
+    ----------
+    days_location : str, optional
+        The data directory. Default is "998_generated\\days\\".
+
+    Returns
+    -------
+    days : list of Day object
+        Measurement days, class Day from nano_load_days.
+    """
+    files = glob.glob(days_location+"*.pkl")
+    days = []
+    for file in files:
+        day = load_list(file,"")
+        days.append(day)
+
+    return days
+
+
+def load_all_impacts(impacts_location = "998_generated\\impacts\\"):
+    """
+    The function to load all the impacts data.
+
+    Parameters
+    ----------
+    impacts_location : str, optional
+        The data directory. Default is "998_generated\\impacts\\".
+
+    Returns
+    -------
+    impacts : list of Impact object
+        Impact data points, class Impact from nano_load_days.
+    """
+    files = glob.glob(impacts_location+"*.pkl")
+    impacts = []
+    for file in files:
+        impact = load_list(file,"")
+        impacts.append(impact)
+
+    flat_list_of_impacts = [item for sublist in impacts for item in sublist]
+    return flat_list_of_impacts
+
+
 def get_cdfs_to_analyze(cdf_files_directory):
     """
     Returns the list of triggered snapshot E-field 
@@ -277,8 +324,8 @@ def process_impact(cdf_file, i):
     """
 
     e = cdf_file.varget("WAVEFORM_DATA_VOLTAGE")[i,:,:]
-    sampling_rate = cdf_file.varget("SAMPLING_RATE")[0]
-    date_time = tt2000_to_date(cdf_file.varget("EPOCH")[0])
+    sampling_rate = cdf_file.varget("SAMPLING_RATE")[i]
+    date_time = tt2000_to_date(cdf_file.varget("EPOCH")[i])
     epoch_offset = cdf_file.varget("EPOCH_OFFSET")
 
     time_step = epoch_offset[i][1]-epoch_offset[i][0]
@@ -432,22 +479,19 @@ def process_cdf(cdf_file):
         #higher sampling rate, process and append impacts with Impact object
 
         for i in range(events_count):
-            TDS_cat_dust = quality_fact[i] == 65535
-            if TDS_cat_dust:
-                cnn_cat_filename = YYYYMMDD+"_"+str(i).zfill(4)+".txt"
-                try:
-                    cnn_cat_data = pd.read_csv(hi_f_cat_location+cnn_cat_filename)
-                except:
-                    missing_files.append(cnn_cat_filename)
-                else:
-                    cnn_cat_dust = cnn_cat_data["Label"]>0.5
-                    if cnn_cat_dust[0]:
-                        impact = process_impact(cdf_file, i)
-                        impacts.append(impact)
-                    else:
-                        pass #not an impact
+            cnn_cat_filename = YYYYMMDD+"_"+str(i).zfill(4)+".txt"
+            try:
+                cnn_cat_data = pd.read_csv(hi_f_cat_location+cnn_cat_filename)
+            except:
+                missing_files.append(cnn_cat_filename)
             else:
-                pass #TODO when we have data we can do those as well
+                cnn_cat_dust = cnn_cat_data["Label"]>0.5
+                if cnn_cat_dust[0]:
+                    impact = process_impact(cdf_file, i)
+                    impacts.append(impact)
+                else:
+                    pass #not an impact
+
 
     else:
         raise Exception("Undefined data @ "+

@@ -1,12 +1,11 @@
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib as mpl
-import glob
 import numpy as np
 import datetime as dt
 from scipy import stats
 
-from nano_load_days import load_list
+from nano_load_days import load_all_days
 from nano_load_days import Impact
 from nano_load_days import Day
 from conversions import jd2date
@@ -20,27 +19,7 @@ apo_jd = 2459000.5+np.array([134,368,566,765,954,1134])
 peri_jd = 2459000.5+np.array([255,470,666,865,1045,1224])
 
 
-def load_all_days(days_location = "998_generated\\days\\"):
-    """
-    The function to load all the measurement days data.
 
-    Parameters
-    ----------
-    days_location : str, optional
-        The data directory. Default is "998_generated\\days\\".
-
-    Returns
-    -------
-    days : list of Day object
-        Measurement days, class Day from nano_load_days.
-    """
-    files = glob.glob(days_location+"*.pkl")
-    days = []
-    for file in files:
-        day = load_list(file,"")
-        days.append(day)
-
-    return days
 
 
 def extract_variables_from_days(days):
