@@ -51,9 +51,9 @@ def pad(wf,where_to_start):
     """
     
     #noise background
-    stdev_provisional = np.std(wf)
-    mask = ( (wf-np.mean(wf)) < 2*stdev_provisional )
-    wf_padded = np.random.normal(np.mean(wf[mask]),np.std(wf[mask]),2*len(wf))
+    centered = wf-np.mean(wf)
+    usual = np.sort(centered)[int(len(centered)*0.1):int(len(centered)//1.1)]
+    wf_padded = np.random.normal(np.mean(wf),np.std(usual),2*len(wf))
     
     #softened signal
     softening_mask = np.hstack((np.arange(0,1,0.1),
