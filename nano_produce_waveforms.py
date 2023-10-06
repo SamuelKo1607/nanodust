@@ -51,7 +51,9 @@ def pad(wf,where_to_start):
     """
     
     #noise background
-    wf_padded = np.random.normal(np.mean(wf),np.std(wf),2*len(wf))
+    stdev_provisional = np.std(wf)
+    mask = ( (wf-np.mean(wf)) < 2*stdev_provisional )
+    wf_padded = np.random.normal(np.mean(wf[mask]),np.std(wf[mask]),2*len(wf))
     
     #softened signal
     softening_mask = np.hstack((np.arange(0,1,0.1),
@@ -127,7 +129,28 @@ def plot_and_save(wfs,name,location="998_generated\\waveforms\\TDS_other\\"):
 
 def main(target_input_cdf,
          target_output_stats,
-         plot = False):
+         plot = 0.005):
+    """
+    The main function that cycles through the files and makes padded
+    and subsampled wavefroms as .txt. May or may not plot for visual 
+    inspection. 
+
+    Parameters
+    ----------
+    target_input_cdf : str
+        A CDF file to analyze.
+    target_output_stats : str
+        A stats file, to remember what we already did.
+    plot : float, optional
+        Whether to plot the figure. If decimal is used, 
+        a random subset of figures is produced, with 0.5 
+        meaning 50% subsample. The default is 0.01.
+
+    Returns
+    -------
+    None.
+
+    """
     
     #path = "C:\\Users\\skoci\\Disk Google\\000 škola\\UIT\\getting data\\solo\\rpw\\tds_wf_e"
     #cdfs = glob.glob(path+"\\*L2*tswf-e*.cdf")
@@ -205,9 +228,12 @@ def main(target_input_cdf,
                 
                         # write the data row by row
                         for j in range(len(ch0)):
-                            writer.writerow((ch0[j],ch1[j],ch2[j]))
+                            writer.writerow((np.around(ch0[j],6)*1000,
+                                             np.around(ch1[j],6)*1000,
+                                             np.around(ch2[j],6)*1000
+                                             ))
 
-                        if plot:
+                        if np.random.random() < plot:
                             plot_and_save(wfs=[ch0,ch1,ch2],
                                           name=YYYYMMDD+"_"+str(i).zfill(4),
                                           location=folder)
