@@ -11,6 +11,7 @@ from nano_load_days import load_all_impacts
 from nano_load_days import load_all_days
 from nano_load_days import load_list
 from nano_load_days import save_list
+from nano_load_days import get_errors
 from nano_load_days import Impact
 from nano_load_days import Day
 from nano_ephemeris import load_hae
@@ -54,9 +55,6 @@ def solo_vse(jd,
         Is either np.shape(solo_vse(jd))==(3,) if input was float or 
         np.shape(solo_vse(jd))==(n,3) if the input was array of len(jd)==n.
     """
-    #try looking for a pre-computed function
-    #if found, use it
-    #if not found, build it and then use it
     try:
         f_vse_x = load_list("vse_x.pkl",location)[0]
         f_vse_y = load_list("vse_y.pkl",location)[0]
@@ -89,6 +87,31 @@ def solo_vse(jd,
             return vse
 
 
+def get_venus_distances(jds):
+    """
+    Gives the distance of SolO from Venus in times jds. 
+
+    Parameters
+    ----------
+    jds : float or np.array of float
+        Julian dates of interest.
+
+    Returns
+    -------
+    venus_distances : float or np.array of float
+        Distances.
+
+    """
+    vses = solo_vse(jds)
+    if vses.ndim == 1:
+        venus_distances = (vses[0]**2 + vses[1]**2 + vses[2]**2)**0.5
+    elif vses.ndim == 2:
+        venus_distances = (vses[:,0]**2 + vses[:,1]**2 + vses[:,2]**2)**0.5
+    else:
+        raise ValueError("unsupported jds dim "+str(vses.ndim-1))
+    return venus_distances
+
+
 def get_venus_approaches(distance=0.1):
     """
     Gets an array of all the Venus approaches at which SolO got closer than 
@@ -107,14 +130,13 @@ def get_venus_approaches(distance=0.1):
     """
     solo_jd, solo_hae = load_hae(solo_ephemeris_file)
     jds = np.arange(min(solo_jd),max(solo_jd),1/1440)
-    vses = solo_vse(jds)
-    venus_distances = (vses[:,0]**2 + vses[:,1]**2 + vses[:,2]**2)**0.5
+    venus_distances = get_venus_distances(jds)
     local_minima = argrelextrema(venus_distances, np.less)[0]
     approaches = jds[local_minima[venus_distances[local_minima]<distance]]
     return approaches
 
 
-def oversampling_flux(time,flux,window=5,order=2):
+def oversampling_flux(time,flux,window=7,order=2):
     """
     The function to return smoothed spline of the flux using Savitzky Golay.
 
@@ -144,7 +166,8 @@ def oversampling_flux(time,flux,window=5,order=2):
     return oversampled_time, oversampled_flux
 
 
-def plot_venus_approach_profiles(deltadays=14):
+def plot_venus_approach_profiles(deltadays=14,
+                                 figures_location = "998_generated\\figures\\"):
     """
     A procedure to show daily impac counts and how they evolve close to Venus,
     one panel for each Venus encounter.
@@ -166,6 +189,7 @@ def plot_venus_approach_profiles(deltadays=14):
     jds = np.array(jds)
     approaches = get_venus_approaches(distance=0.1)
     approaches = approaches[(approaches>min(jds))*(max(jds)>approaches)]
+    approach_distances = get_venus_distances(approaches)
     fig = plt.figure(figsize=(3,2))
     gs = fig.add_gridspec(3,1,hspace=0.05)
     ax = gs.subplots(sharex=True)
@@ -180,20 +204,31 @@ def plot_venus_approach_profiles(deltadays=14):
             delta.append((day.date-jd2date(approaches[i]).date()).days)
             flux.append(day.impact_count/day.duty_hours*24)
         oversampled_time, oversampled_flux = oversampling_flux(delta,flux)
-        ax[i].plot(oversampled_time, oversampled_flux,lw=0.5,color="red")
-        ax[i].scatter(delta,flux)
+        errors = get_errors(filtered_days)
+        ax[i].plot(oversampled_time, oversampled_flux,
+                   lw=0.5,color="red")
+        ax[i].errorbar(delta,flux, errors,
+                       color="blue",alpha=0.2,elinewidth=1,lw=0)
+        ax[i].scatter(delta,flux,color="blue")
         ax[i].text(.05, .75, str(jd2date(approaches[i]))[:16],
                    fontsize="small", ha='left',
                    transform=ax[i].transAxes)
-    for a in ax:
-        a.set_ylim(0,650)
-    ax[-1].set_xlabel("Days to Venus encounter [day]")
-    ax[len(ax)//2].set_ylabel("Impact rate [$day^{-1}$]")
+        ax[i].text(.95, .75, str(int(approach_distances[i]*au))+" km",
+                   fontsize="small", ha='right',
+                   transform=ax[i].transAxes)
 
+    for a in ax:
+        a.set_ylim(0,740)
+        a.vlines(0,0,740,color="gray",lw=0.5,alpha=0.3,zorder=1,ls="dotted")
+    ax[-1].set_xlabel("Days since Venus encounter [day]")
+    ax[len(ax)//2].set_ylabel("Impact rate [$day^{-1}$]")
+    fig.savefig(figures_location+'venus_approach_profiles.png',
+                format='png', dpi=600)
     fig.show()
 
 
-def plot_venus_impacts(zoom=0.03):
+def plot_venus_impacts(zoom=0.003,
+                       figures_location = "998_generated\\figures\\"):
     """
     The procedure to show the zoom on Venus and all the dust impacts 
     encountered near Venus.
@@ -209,34 +244,33 @@ def plot_venus_impacts(zoom=0.03):
 
     """
     solo_jd, solo_hae = load_hae(solo_ephemeris_file)
-    trajectory_x = np.zeros(0)
-    trajectory_y = np.zeros(0)
-    for jd in solo_jd:
-        if jd<2460104.5:
-            vse = solo_vse(jd)
-            trajectory_x = np.append(trajectory_x,vse[0])
-            trajectory_y = np.append(trajectory_y,vse[1])
+
+    vse = solo_vse(solo_jd[solo_jd<2460104.5])
+    trajectory_x = vse[:,0]
+    trajectory_y = vse[:,1]
 
     impacts = load_all_impacts()
     impact_times = []
-    vse_xs = np.zeros(0)
-    vse_ys = np.zeros(0)
+    jds = []
     for i in range(len(impacts)):
         impact = impacts[i]
         impact_times.append(impact.datetime)
-        jd = date2jd(impact.datetime)
-        vse = solo_vse(jd)
-        vse_xs = np.append(vse_xs,vse[0])
-        vse_ys = np.append(vse_ys,vse[1])
+        jds.append(date2jd(impact.datetime))
+    jds = np.array(jds)
+    vse = solo_vse(jds)
+    vse_xs = vse[:,0]
+    vse_ys = vse[:,1]
     
     fig,ax  = plt.subplots()
-    ax.plot(trajectory_x,trajectory_y,color="red",lw=0.2)
-    ax.scatter(vse_xs,vse_ys,s=5,alpha=0.1,lw=0,color="blue")
-    ax.set_xlim(-zoom,zoom)
-    ax.set_ylim(-zoom,zoom)
+    ax.plot(trajectory_x*au,trajectory_y*au,color="red",lw=0.2)
+    ax.scatter(vse_xs*au,vse_ys*au,s=5,alpha=0.1,lw=0,color="blue")
+    ax.set_xlim(-zoom*au,zoom*au)
+    ax.set_ylim(-zoom*au,zoom*au)
     ax.set_aspect(1)
-    ax.set_xlabel("VSE X [AU]")
-    ax.set_ylabel("VSE Y [AU]")
+    ax.set_xlabel("VSE X [km]")
+    ax.set_ylabel("VSE Y [km]")
+    fig.savefig(figures_location+'venus_approach_impacts.png',
+                format='png', dpi=600)
     fig.show()
 
 
