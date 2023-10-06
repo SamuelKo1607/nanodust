@@ -129,7 +129,7 @@ def plot_and_save(wfs,name,location="998_generated\\waveforms\\TDS_other\\"):
 
 def main(target_input_cdf,
          target_output_stats,
-         plot = 0.005):
+         plot = 0.01):
     """
     The main function that cycles through the files and makes padded
     and subsampled wavefroms as .txt. May or may not plot for visual 
@@ -220,7 +220,7 @@ def main(target_input_cdf,
                     ch0 = subsample(ch0)
                     ch1 = subsample(ch1)
                     ch2 = subsample(ch2)
-    
+
                 #save the processed data as .csv
                 if "subsample" in treatment:
                     with open(folder+YYYYMMDD+"_"+str(i).zfill(4)+".csv", 'w', encoding='UTF8') as f:
@@ -228,12 +228,12 @@ def main(target_input_cdf,
                 
                         # write the data row by row
                         for j in range(len(ch0)):
-                            writer.writerow((np.around(ch0[j],6)*1000,
-                                             np.around(ch1[j],6)*1000,
-                                             np.around(ch2[j],6)*1000
+                            writer.writerow(("{:.4f}".format(1000*ch0[j]),
+                                             "{:.4f}".format(1000*ch1[j]),
+                                             "{:.4f}".format(1000*ch2[j])
                                              ))
 
-                        if np.random.random() < plot:
+                        if np.random.random() < plot or quality_fact[i] == 65535:
                             plot_and_save(wfs=[ch0,ch1,ch2],
                                           name=YYYYMMDD+"_"+str(i).zfill(4),
                                           location=folder)
