@@ -1,6 +1,7 @@
 import numpy as np
 import csv
 from scipy import interpolate
+import pickle
 
 au = 149597870.7 #astronomical unit, km
 
@@ -86,7 +87,7 @@ def load_hae(ephemeris_file):
     return jd, hae/au
 
 
-def fetch_heliocentric(file):
+def fetch_heliocentric_solo(file,location = "998_generated\\assets\\"):
     """
     This function returns helicoentric distance & phase, in addition to 
     radial and tangential velocities in a form of 1D functions. Be careful, 
@@ -95,7 +96,7 @@ def fetch_heliocentric(file):
     Parameters
     ----------
     file : str
-       The ephemeris file to access.
+       The solo ephemeris file to access.
 
     Returns
     -------
@@ -108,17 +109,35 @@ def fetch_heliocentric(file):
     f_tan_v : 1D function: float -> float
         heliocentric tangential veloctiy in km/s.
     """
+    try:
+        with open(location+"f_hel_r.pkl", "rb") as f:
+            f_hel_r = pickle.load(f)
+        with open(location+"f_hel_phi.pkl", "rb") as f:
+            f_hel_phi = pickle.load(f)
+        with open(location+"f_rad_v.pkl", "rb") as f:
+            f_rad_v = pickle.load(f)
+        with open(location+"f_tan_v.pkl", "rb") as f:
+            f_tan_v = pickle.load(f)
+    except:
+        jd_ephem, hae_r, hae_v, hae_phi, radial_v, tangential_v, hae_theta = load_ephemeris(file)
+        heliocentric_distance = np.sqrt(hae_r[:,0]**2+hae_r[:,1]**2+hae_r[:,2]**2)/au #in au
+        f_hel_r = interpolate.interp1d(jd_ephem,heliocentric_distance,fill_value="extrapolate",kind=3)
+        f_hel_phi = interpolate.interp1d(jd_ephem,hae_phi,fill_value="extrapolate",kind=3)
+        f_rad_v = interpolate.interp1d(jd_ephem,radial_v,fill_value="extrapolate",kind=3)
+        f_tan_v = interpolate.interp1d(jd_ephem,tangential_v,fill_value="extrapolate",kind=3)
 
-    jd_ephem, hae_r, hae_v, hae_phi, radial_v, tangential_v, hae_theta = load_ephemeris(file)
-    heliocentric_distance = np.sqrt(hae_r[:,0]**2+hae_r[:,1]**2+hae_r[:,2]**2)/au #in au
-    f_hel_r = interpolate.interp1d(jd_ephem,heliocentric_distance,fill_value="extrapolate",kind=3)
-    f_hel_phi = interpolate.interp1d(jd_ephem,hae_phi,fill_value="extrapolate",kind=3)
-    f_rad_v = interpolate.interp1d(jd_ephem,radial_v,fill_value="extrapolate",kind=3)
-    f_tan_v = interpolate.interp1d(jd_ephem,tangential_v,fill_value="extrapolate",kind=3)
-    
-    return f_hel_r, f_hel_phi, f_rad_v, f_tan_v
-
-
+        with open(location+"f_hel_r.pkl", "wb") as f:
+            pickle.dump(f_hel_r, f)
+        with open(location+"f_hel_phi.pkl", "wb") as f:
+            pickle.dump(f_hel_phi, f)
+        with open(location+"f_rad_v.pkl", "wb") as f:
+            pickle.dump(f_rad_v, f)
+        with open(location+"f_tan_v.pkl", "wb") as f:
+            pickle.dump(f_tan_v, f)
+    else:
+        pass
+    finally:
+        return f_hel_r, f_hel_phi, f_rad_v, f_tan_v
 
 
 
