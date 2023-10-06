@@ -3,11 +3,13 @@ import matplotlib.dates as mdates
 import matplotlib as mpl
 import numpy as np
 import datetime as dt
-from scipy import stats
+
 
 from nano_load_days import load_all_days
 from nano_load_days import Impact
 from nano_load_days import Day
+from nano_load_days import get_errors
+from nano_load_days import extract_variables_from_days
 from conversions import jd2date
 import figure_standards as figstd
 
@@ -22,66 +24,7 @@ peri_jd = 2459000.5+np.array([255,470,666,865,1045,1224])
 
 
 
-def extract_variables_from_days(days):
-    """
-    The function to extract the relevant attributes from the provided days.
 
-    Parameters
-    ----------
-    days : list of Day object
-        Measurement days, class Day from nano_load_days.
-
-    Returns
-    -------
-    dates : np.array of float
-        The measuremetn days.
-    counts : np.array of int
-        The dust counts, enocutered on the dates.
-    duty_hours : np.array of float
-        The duty cycle in hours, per day. Often around 1.5.
-    sampling_rates : np.array of float
-        The sampling rate on that day. No dates with a vraiable 
-        sampling rate were processed in the first place.
-    """
-    dates = np.zeros(0,dtype=dt.datetime)
-    counts = np.zeros(0,dtype=int)
-    duty_hours = np.zeros(0,dtype=float)
-    sampling_rates = np.zeros(0,dtype=float)
-    for day in days:
-        dates = np.append(dates,day.date)
-        counts = np.append(counts,day.impact_count)
-        duty_hours = np.append(duty_hours, day.duty_hours)
-        sampling_rates = np.append(sampling_rates, day.sampling_rate)
-
-    return dates, counts, duty_hours, sampling_rates
-
-
-def get_errors(days, prob_coverage = 0.9):
-    """
-    The function to calculate the errorbars for flux 
-    assuming Poisson distribution and taking into account
-    the number of detection.
-
-    Parameters
-    ----------
-    days : list of Day object
-        Measurement days, class Day from nano_load_days.
-    prob_coverage : float, optional
-        The coverage of the errobar interval. The default is 0.9.
-
-    Returns
-    -------
-    err_plusminus_flux : np.array of float
-        The errorbars, lower and upper bound, shape (2, n).
-
-    """
-    dates, counts, duty_hours, sampling_rates = extract_variables_from_days(days)
-
-    counts_err_minus = -stats.poisson.ppf(0.5-prob_coverage/2, mu=counts)+counts
-    counts_err_plus  = +stats.poisson.ppf(0.5+prob_coverage/2, mu=counts)-counts
-    err_plusminus_flux = np.array([counts_err_minus,counts_err_plus]) / (duty_hours/(24))
-
-    return err_plusminus_flux
 
 
 def plot_flux(days, figures_location = "998_generated\\figures\\"):
