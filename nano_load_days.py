@@ -6,11 +6,12 @@ import cdflib
 import pickle
 from scipy.signal import butter
 from scipy.signal import sosfilt
+from scipy import stats
 
 from conversions import tt2000_to_date
 from conversions import YYYYMMDD2jd
 from conversions import YYYYMMDD2date
-from nano_ephemeris import fetch_heliocentric
+from nano_ephemeris import fetch_heliocentric_solo
 
 from keys import cdf_stat_location
 from keys import cdf_tswf_e_location
@@ -27,10 +28,12 @@ class Impact:
     Pretty self explanatory, each instance holds the attributes of one assumed 
     dust impact. 
     """
-    def __init__(self, datetime, sampling_rate, amplitude):
+    def __init__(self, datetime, sampling_rate, amplitude, index):
         self.datetime = datetime
+        self.YYYYMMDD = datetime.strftime('%Y%m%d')
         self.sampling_rate = sampling_rate
         self.amplitude = amplitude
+        self.index = index
         self.produced = dt.datetime.now()
 
 
@@ -164,6 +167,68 @@ def load_all_impacts(impacts_location = "998_generated\\impacts\\"):
 
     flat_list_of_impacts = [item for sublist in impacts for item in sublist]
     return flat_list_of_impacts
+
+
+def extract_variables_from_days(days):
+    """
+    The function to extract the relevant attributes from the provided days.
+
+    Parameters
+    ----------
+    days : list of Day object
+        Measurement days, class Day from nano_load_days.
+
+    Returns
+    -------
+    dates : np.array of float
+        The measuremetn days.
+    counts : np.array of int
+        The dust counts, enocutered on the dates.
+    duty_hours : np.array of float
+        The duty cycle in hours, per day. Often around 1.5.
+    sampling_rates : np.array of float
+        The sampling rate on that day. No dates with a vraiable 
+        sampling rate were processed in the first place.
+    """
+    dates = np.zeros(0,dtype=dt.datetime)
+    counts = np.zeros(0,dtype=int)
+    duty_hours = np.zeros(0,dtype=float)
+    sampling_rates = np.zeros(0,dtype=float)
+    for day in days:
+        dates = np.append(dates,day.date)
+        counts = np.append(counts,day.impact_count)
+        duty_hours = np.append(duty_hours, day.duty_hours)
+        sampling_rates = np.append(sampling_rates, day.sampling_rate)
+
+    return dates, counts, duty_hours, sampling_rates
+
+
+def get_errors(days, prob_coverage = 0.9):
+    """
+    The function to calculate the errorbars for flux 
+    assuming Poisson distribution and taking into account
+    the number of detection.
+
+    Parameters
+    ----------
+    days : list of Day object
+        Measurement days, class Day from nano_load_days.
+    prob_coverage : float, optional
+        The coverage of the errobar interval. The default is 0.9.
+
+    Returns
+    -------
+    err_plusminus_flux : np.array of float
+        The errorbars, lower and upper bound, shape (2, n).
+
+    """
+    dates, counts, duty_hours, sampling_rates = extract_variables_from_days(days)
+
+    counts_err_minus = -stats.poisson.ppf(0.5-prob_coverage/2, mu=counts)+counts
+    counts_err_plus  = +stats.poisson.ppf(0.5+prob_coverage/2, mu=counts)-counts
+    err_plusminus_flux = np.array([counts_err_minus,counts_err_plus]) / (duty_hours/(24))
+
+    return err_plusminus_flux
 
 
 def get_cdfs_to_analyze(cdf_files_directory):
@@ -340,7 +405,7 @@ def process_impact(cdf_file, i):
 
     amplitude = find_amplitude(smooth_1,smooth_2,smooth_3)
 
-    impact = Impact(date_time, sampling_rate, amplitude)
+    impact = Impact(date_time, sampling_rate, amplitude, i)
 
     return impact
 
@@ -366,7 +431,8 @@ def get_solo_state(YYYYMMDD, ephem_file):
         radial speed in km/s.
 
     """
-    f_hel_r, f_hel_phi, f_rad_v, f_tan_v = fetch_heliocentric(solo_ephemeris_file)
+    f_hel_r, f_hel_phi, f_rad_v, f_tan_v = fetch_heliocentric_solo(
+                                                solo_ephemeris_file)
     jd = YYYYMMDD2jd(YYYYMMDD)
     r = float(f_hel_r(jd))
     v_rad = float(f_rad_v(jd))
