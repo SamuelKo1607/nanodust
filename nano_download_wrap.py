@@ -12,6 +12,7 @@ from conversions import date2YYYYMMDD
 from solo_download import fetch
 from keys import cdf_stat_location
 from keys import cdf_tswf_e_location
+from keys import cdf_mamp_location
 
 
 
@@ -71,7 +72,7 @@ def soar_download(dt_from,
     return files
 
 
-def download_update_cdf(strat_date,
+def download_update_cdf(start_date,
                         end_date):
     """
     The function to download all the SOAR files 
@@ -91,13 +92,15 @@ def download_update_cdf(strat_date,
     """
 
     folders = [cdf_stat_location,
-               cdf_tswf_e_location]
+               cdf_tswf_e_location,
+               cdf_mamp_location]
 
     data_products = ["rpw-tds-surv-stat",
-                     "rpw-tds-surv-tswf-e"]
+                     "rpw-tds-surv-tswf-e",
+                     "rpw-tds-surv-mamp"]
 
     for i in range(len(folders)):
-        soar_download(strat_date,
+        soar_download(start_date,
                       end_date,
                       "RPW",
                       2,
