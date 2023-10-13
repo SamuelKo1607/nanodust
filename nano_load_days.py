@@ -42,6 +42,10 @@ class Impact:
               " \n sampling rate: "+ str(self.sampling_rate)+
               " \n amplitude: " + str(self.amplitude))
 
+    def show(self):
+        pass
+
+
 
 class Day:
     """
@@ -49,7 +53,8 @@ class Day:
     """
     def __init__(self,
                  date,
-                 impact_count,
+                 impact_times,
+                 non_impact_times,
                  duty_hours,
                  sampling_rate,
                  heliocentric_distance,
@@ -57,7 +62,9 @@ class Day:
                  heliocentric_radial_speed):
         self.date = date
         self.YYYYMMDD = date.strftime('%Y%m%d')
-        self.impact_count = impact_count
+        self.impact_count = len(impact_times)
+        self.impact_times = impact_times
+        self.non_impact_times = non_impact_times
         self.duty_hours = duty_hours
         self.sampling_rate = sampling_rate
         self.heliocentric_distance = heliocentric_distance
@@ -145,7 +152,9 @@ def load_all_days(days_location = "998_generated\\days\\"):
     return days
 
 
-def load_all_impacts(impacts_location = "998_generated\\impacts\\"):
+def load_all_impacts(impacts_location = "998_generated\\impacts\\",
+                     date_from = dt.datetime(2010,1,1),
+                     date_to = dt.datetime(2050,1,1)):
     """
     The function to load all the impacts data.
 
@@ -166,7 +175,10 @@ def load_all_impacts(impacts_location = "998_generated\\impacts\\"):
         impacts.append(impact)
 
     flat_list_of_impacts = [item for sublist in impacts for item in sublist]
-    return flat_list_of_impacts
+
+    filtered = [i for i in flat_list_of_impacts if date_from <= i.datetime <= date_to ]
+
+    return filtered
 
 
 def extract_variables_from_days(days):
@@ -231,7 +243,8 @@ def get_errors(days, prob_coverage = 0.9):
     return err_plusminus_flux
 
 
-def get_cdfs_to_analyze(cdf_files_directory):
+def get_cdfs_to_analyze(cdf_files_directory,
+                        search_mask = "*rpw-tds-surv-tswf-e*.cdf"):
     """
     Returns the list of triggered snapshot E-field 
     cdfs from the given directory.
@@ -247,7 +260,7 @@ def get_cdfs_to_analyze(cdf_files_directory):
         List of filepaths to the files.
 
     """
-    cdfs = glob.glob(cdf_files_directory+"*rpw-tds-surv-tswf-e*.cdf")
+    cdfs = glob.glob(cdf_files_directory+search_mask)
     return cdfs
 
 
@@ -469,6 +482,7 @@ def process_cdf(cdf_file):
         The files that were expected but were not found.
     """
     e = cdf_file.varget("WAVEFORM_DATA_VOLTAGE")
+    epochs = cdf_file.varget("EPOCH")
     quality_fact = cdf_file.varget("QUALITY_FACT")
     channel_ref = cdf_file.varget("CHANNEL_REF")
     sampling_rate = cdf_file.varget("SAMPLING_RATE")
@@ -566,15 +580,25 @@ def process_cdf(cdf_file):
     #construct day
     try:
         date = dt.datetime.strptime(YYYYMMDD, "%Y%m%d").date()
-        n = len(impacts)
+        all_suspect_times = [tt2000_to_date(epoch) for epoch in epochs]
+        impact_times=[i.datetime for i in impacts]
+        non_impact_times = list(set(all_suspect_times) - set(impact_times))
         duty_hours = get_duty_hours(YYYYMMDD, cdf_stat_location)
         r, v, v_rad = get_solo_state(YYYYMMDD, solo_ephemeris_file)
+
 
     except Exception as err:
         print("day construction failed @ "+YYYYMMDD)
         raise err
     else:
-        day = Day(date,n,duty_hours,sampling_rate[0],r,v,v_rad)
+        day = Day(date,
+                  impact_times,
+                  non_impact_times,
+                  duty_hours,
+                  sampling_rate[0],
+                  r,
+                  v,
+                  v_rad)
 
     return day, impacts, missing_files
 
