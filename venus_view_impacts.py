@@ -227,8 +227,10 @@ def plot_venus_approach_profiles(deltadays=14,
     fig.show()
 
 
-def plot_venus_impacts(zoom=0.003,
-                       figures_location = "998_generated\\figures\\"):
+def plot_venus_impacts(zoom=0.0005,
+                       figures_location = "998_generated\\figures\\",
+                       date_from = dt.datetime(2010,1,1),
+                       date_to = dt.datetime(2050,1,1)):
     """
     The procedure to show the zoom on Venus and all the dust impacts 
     encountered near Venus.
@@ -245,11 +247,16 @@ def plot_venus_impacts(zoom=0.003,
     """
     solo_jd, solo_hae = load_hae(solo_ephemeris_file)
 
-    vse = solo_vse(solo_jd[solo_jd<2460104.5])
+    solo_jd_oversampled = np.arange(min(solo_jd[solo_jd<2460104.5]),
+                                    max(solo_jd[solo_jd<2460104.5]),
+                                    0.015625)
+
+    vse = solo_vse(solo_jd_oversampled)
     trajectory_x = vse[:,0]
     trajectory_y = vse[:,1]
 
-    impacts = load_all_impacts()
+    impacts = load_all_impacts(date_from = date_from, date_to = date_to)
+    indices = np.array([impact.index for impact in impacts])
     impact_times = []
     jds = []
     for i in range(len(impacts)):
@@ -262,8 +269,21 @@ def plot_venus_impacts(zoom=0.003,
     vse_ys = vse[:,1]
     
     fig,ax  = plt.subplots()
+    venus = plt.Circle(( 0 , 0), 6000, facecolor="brown", edgecolor="none")
     ax.plot(trajectory_x*au,trajectory_y*au,color="red",lw=0.2)
     ax.scatter(vse_xs*au,vse_ys*au,s=5,alpha=0.1,lw=0,color="blue")
+    for i,index in enumerate(indices.astype(str)):
+        ax.annotate(index,(vse_xs[i]*au,vse_ys[i]*au),
+                    (vse_xs[i]*au+np.random.uniform(-1.5,0)*20000,
+                     vse_ys[i]*au+np.random.uniform(0,1.5)*20000),
+                    fontsize="xx-small")
+    ax.add_artist(venus)
+    ax.text(.05, .92, date_from.strftime("%Y-%m-%d %H:%M"),
+               fontsize="small", ha='left',
+               transform=ax.transAxes)
+    ax.text(.05, .85, date_to.strftime("%Y-%m-%d %H:%M"),
+               fontsize="small", ha='left',
+               transform=ax.transAxes)
     ax.set_xlim(-zoom*au,zoom*au)
     ax.set_ylim(-zoom*au,zoom*au)
     ax.set_aspect(1)
@@ -278,7 +298,8 @@ def plot_venus_impacts(zoom=0.003,
 
 plot_venus_approach_profiles()
 
-plot_venus_impacts()
+plot_venus_impacts(date_from = dt.datetime(2022,9,4,0,0),
+                   date_to = dt.datetime(2022,9,4,6,0))
 
 
 
