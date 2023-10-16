@@ -22,7 +22,6 @@ from keys import solo_ephemeris_file
 
 
 
-
 class Impact:
     """
     Pretty self explanatory, each instance holds the attributes of one assumed 
@@ -43,8 +42,7 @@ class Impact:
               " \n amplitude: " + str(self.amplitude))
 
     def show(self):
-        pass
-
+        print(vars(self))
 
 
 class Day:
@@ -79,10 +77,55 @@ class Day:
               " \n duty hours: " + str(self.duty_hours))
 
 
+class ImpactSuspect:
+    """
+    Each instance holds the attributes of 
+    one suspected dust impact as per MAMP. 
+    """
+    def __init__(self,
+                 datetime,
+                 sampling_rate,
+                 period,
+                 index,
+                 classification,
+                 channel_ref,
+                 amplitudes):
+        self.datetime = datetime
+        self.YYYYMMDD = datetime.strftime('%Y%m%d')
+        self.sampling_rate = sampling_rate
+        self.period = period
+        self.index = index
+        self.classification = classification
+        if classification == 1:
+            self.classification_readable = "Confirmed dust"
+        elif classification == -1:
+            self.classification_readable = "Confirmed non-dust"
+        else:
+            self.classification_readable = "Not confirmed"
+        self.channel_ref = channel_ref
+        self.amplitudes = amplitudes
+        self.produced = dt.datetime.now()
+
+    def info(self):
+        print(self.datetime.strftime("%d.%m.%Y %H:%M:%S, ")+
+              self.classification_readable + ","
+              " \n sampling rate: "+ str(self.sampling_rate)+
+              " \n amplitude: " + str(self.amplitudes))
+
+    def show(self):
+        print(vars(self))
 
 
 
-def save_list(data,name,location):
+
+
+
+
+
+
+
+
+def save_list(data,name,location=""):
     """
     A simple function to save a given list to a specific location using pickle.
 
@@ -94,8 +137,9 @@ def save_list(data,name,location):
     name : str
         The name of the file to be written. 
         
-    location : str
-        The relative path to the data folder.
+    location : str, optional
+        The relative path to the data folder. May not be used if the name
+        contains the folder as well. Default is therefore empty.
 
     Returns
     -------
@@ -162,6 +206,10 @@ def load_all_impacts(impacts_location = "998_generated\\impacts\\",
     ----------
     impacts_location : str, optional
         The data directory. Default is "998_generated\\impacts\\".
+    date_from : dt.datetime
+        The first relevant moment (filtering the instances by >=).
+    date_to : dt.datetime
+        The last relevant moment (filtering the instances by <=).
 
     Returns
     -------
@@ -175,6 +223,40 @@ def load_all_impacts(impacts_location = "998_generated\\impacts\\",
         impacts.append(impact)
 
     flat_list_of_impacts = [item for sublist in impacts for item in sublist]
+
+    filtered = [i for i in flat_list_of_impacts if date_from <= i.datetime <= date_to ]
+
+    return filtered
+
+
+def load_all_suspects(location = "998_generated\\mamp_processed\\",
+                      date_from = dt.datetime(2010,1,1),
+                      date_to = dt.datetime(2050,1,1)):
+    """
+    The function to load all the suspected impacts as per MAMP.
+
+    Parameters
+    ----------
+    location : str, optional
+        The data directory. Default is "998_generated\\mamp_processed\\".
+    date_from : dt.datetime
+        The first relevant moment (filtering the instances by >=).
+    date_to : dt.datetime
+        The last relevant moment (filtering the instances by <=).
+
+    Returns
+    -------
+    suspects : list of ImpactSuspect object
+        Impact suspects, class ImpactSuspect.
+    """
+
+    files = glob.glob(location+"*.pkl")
+    suspects = []
+    for file in files:
+        suspect = load_list(file,"")
+        suspects.append(suspect)
+
+    flat_list_of_impacts = [item for sublist in suspects for item in sublist]
 
     filtered = [i for i in flat_list_of_impacts if date_from <= i.datetime <= date_to ]
 
