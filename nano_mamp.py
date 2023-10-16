@@ -2,130 +2,203 @@ import numpy as np
 import cdflib
 import matplotlib.pyplot as plt
 import datetime as dt
+import sys
+import glob
 
 from keys import cdf_mamp_location
 
 from nano_load_days import get_cdfs_to_analyze
 from nano_load_days import load_all_days
+from nano_load_days import load_all_suspects
+from nano_load_days import load_list
+from nano_load_days import save_list
 from nano_load_days import Impact
 from nano_load_days import Day
+from nano_load_days import ImpactSuspect
 from conversions import tt2000_to_date
 
 
-def dt_isclose(datetime1,
-               datetime2_list,
-               thershold = dt.timedelta(milliseconds=65)):
-    """
-    Will decide if two datetimes are close to each other.
-
-    Parameters
-    ----------
-    datetime1 : dt.datetime
-        The first time of interest.
-    datetime2_list : dt.datetime or a list of dt.datetime
-        The second time of interest, possibly a list.
-    thershold : dt.timedelta, optional
-        The maximum difference, inclusive. If datetime2_list is a list,
-        then true is returned if there is a match between datetime_1 and
-        any of the datetime2_list's elements.
-        The default is dt.timedelta(milliseconds=65).
-
-    Returns
-    -------
-    isclose : bool
-        True if they are close.
-
-    """
-    if max(datetime1,datetime2_list) - min(datetime1,datetime2_list) > thershold:
-        isclose = False
-    else:
-        isclose = True
-
-    #TBD make it compare a single time1 with a list2
-
-    return isclose
-
-
-def is_confirmed(days,datetime):
+def is_confirmed(dust_datetimes,
+                 non_dust_datetimes,
+                 suspect_datetimes,
+                 batch = 200,
+                 threshold = dt.timedelta(milliseconds=65)):
     """
     The function to return the information whether the
     waveform was classified as dust or no-dust.
  
     Parameters
     ----------
-    days : list of Day object
-        These days will be checked when confirming whether 
-        the time is a known impact or non-impact.
-    datetime : 
-        The time of interest.
+    dust_datetimes : np.array of dt.datetimes
+        These are the confirmed dust times to check against.
+    non_dust_datetimes : np.array of dt.datetimes
+        These are the confirmed non-dust times to check against.
+    suspect_datetimes : np.array of dt.datetime
+        The times of interest.
+    batch : int
+        how many suspect_datetimes to process at once. Done due to ram, with
+        200 batches, one instance takes up about 400MiB
+    threshold : dt.timedelta
+        The maximum difference, inclusive. If datetime2_list is a list,
+        then true is returned if there is a match between datetime_1 and
+        any of the datetime2_list's elements.
+        The default is dt.timedelta(milliseconds=65).
+    
 
     Returns
     -------
-    confirmed : int
+    classification : np.array of int, length = len(suspect_datetimes)
         1, -1 or 0, where 0 means unknown, 
         1 means dust and -1 means non-dust.
 
     """
-    dust_times = [day.impact_times for day in days]
-    flat_dust_times = [item for sublist in dust_times for item in sublist]
 
-    non_dust_times = [day.non_impact_times for day in days]
-    flat_non_dust_times = [item for sublist in non_dust_times for item in sublist]
+    confirmed_dust = np.zeros(0,dtype=int)
+    confirmed_non_dust = np.zeros(0,dtype=int)
 
-    #TBD take the datetime and compare it to both dusts and non-dusts,
-    # return 1 if dust, return -1 if non-dust and return 0 if non classfied
-    # or in the unlikely case that both dust and non-dust are a match
+    for i in range(len(suspect_datetimes)//batch+1):
+        #get a slice of all the suspects
+        suspect_datetimes_chunk = suspect_datetimes[batch*i:batch*(i+1)]
 
-    classification = 0
+        #the check if the suspects in this chunk are confirmed dusts
+        dust_diffs = np.abs(np.subtract(suspect_datetimes_chunk.reshape((len(suspect_datetimes_chunk),1)),
+                                 dust_datetimes.reshape((1,len(dust_datetimes)))))
+        min_dust_diffs = np.min(dust_diffs,axis=1)
+        confirmed_dust_chunk = min_dust_diffs < threshold
+
+        #the check if the suspects in this chunk are confirmed non-dusts
+        non_dust_diffs = np.abs(np.subtract(suspect_datetimes_chunk.reshape((len(suspect_datetimes_chunk),1)),
+                                     non_dust_datetimes.reshape((1,len(non_dust_datetimes)))))
+        min_non_dust_diffs = np.min(non_dust_diffs,axis=1)
+        confirmed_non_dust_chunk = min_non_dust_diffs < threshold
+
+        #append
+        confirmed_dust = np.append(confirmed_dust,
+                                   confirmed_dust_chunk)
+        confirmed_non_dust = np.append(confirmed_non_dust,
+                                   confirmed_non_dust_chunk)
+
+    classification = confirmed_dust - confirmed_non_dust
 
     return classification
 
 
 
+def get_mamp_suspects(wfs,threshold = 0.002):
+    """
+    The function to return the indices of suspected dust impacts
+    among the electrical waveforms of MAMP.
 
+    Parameters
+    ----------
+    wfs : np.array of float, shape (n, 3)
+        The three waveform channels as recorded with MAMP in XLD1.
+
+    threshold : float
+        The voltage that triggers a suspect, in Volts.
+
+    Returns
+    -------
+    suspects : np.array of in, 1D
+        The indices of suspected dust impacts.
+    """
+
+    #floor at -0.1V
+    wfs = np.maximum(wfs,np.zeros_like(wfs)-0.1)
+
+    #remove median but remember it for later
+    medians = np.median(wfs,axis=0)
+    wfs -= medians
+
+    #get dust suspects
+
+    suspects = np.arange(len(wfs[:,0]))[(wfs[:,0]>threshold)+
+                                        (wfs[:,1]>threshold)+
+                                        (wfs[:,2]>threshold)]
+
+    return suspects
+
+
+def main(target_input_cdf,
+         target_output_pkl,
+         threshold = 0.002):
+    """
+    The main routine, takes the given MAMP cdf, finds all the dust suspects 
+    based on the amplitudes and the threshold. 
+
+    Parameters
+    ----------
+    target_input_cdf : TYPE
+        DESCRIPTION.
+    target_output_pkl : TYPE
+        DESCRIPTION.
+    threshold : float
+        The voltage that triggers a suspect, as in get_mamp_suspects().
+
+    Returns
+    -------
+    None.
+
+    """
+
+    cdf_file = cdflib.CDF(target_input_cdf)
+    wfs = cdf_file.varget("WAVEFORM_DATA")[:,0:3]
+    channel_refs = cdf_file.varget("CHANNEL_REF")
+    sampling_rates = cdf_file.varget("sampling_rate")
+
+    suspects = get_mamp_suspects(wfs,threshold=threshold)
+    epochs = cdf_file.varget("Epoch")
+    suspect_epochs = epochs[suspects]
+    suspect_datetimes = tt2000_to_date(suspect_epochs)
+
+    days = load_all_days()
+    dust_times = [day.impact_times for day in days]
+    flat_dust_times = np.array([item for sublist in dust_times for item in sublist])
+    non_dust_times = [day.non_impact_times for day in days]
+    flat_non_dust_times = np.array([item for sublist in non_dust_times for item in sublist])
+
+    confirmed_classification = is_confirmed(flat_dust_times,
+                                            flat_non_dust_times,
+                                            suspect_datetimes)
+
+    suspect_events = []
+
+    for i, datetime in enumerate(suspect_datetimes):
+        channel_ref = channel_refs[i]
+        sampling_rate = sampling_rates[i]
+        period = min([epochs[i]-epochs[i-1],epochs[i+1]-epochs[i]])
+        classification = confirmed_classification[i]
+        amplitudes = wfs[i,:]
+
+        suspect = ImpactSuspect(datetime,
+                                sampling_rate,
+                                period,
+                                i,
+                                classification,
+                                channel_ref,
+                                amplitudes)
+
+        suspect_events.append(suspect)
+
+    save_list(suspect_events, target_output_pkl)
+
+
+
+"""
 
 cdfs = get_cdfs_to_analyze(cdf_mamp_location,"*mamp*.cdf")
+#file = 'C:\\Users\\skoci\\Disk Google\\000 Škola\\UIT\\getting data\\solo\\rpw\\mamp\\solo_L2_rpw-tds-surv-mamp_20220219_V02.cdf'
 
-file = 'C:\\Users\\skoci\\Disk Google\\000 Škola\\UIT\\getting data\\solo\\rpw\\mamp\\solo_L2_rpw-tds-surv-mamp_20220219_V02.cdf'
+for cdf in cdfs:
+    main(cdf,
+         ("C:\\Users\\skoci\\Documents\\nanodust\\998_generated\\mamp_processed\\"+
+         cdf[cdf.find("solo_L2_rpw-tds-surv-mamp"):-4]+
+         ".pkl"))
 
-
-cdf_file = cdflib.CDF(file)
-print(cdf_file.file)
-wfs = cdf_file.varget("WAVEFORM_DATA")[:,0:3]
-
-#floor at -0.1V
-wfs = np.maximum(wfs,np.zeros_like(wfs)-0.1)
-
-#remove median but remember it for later
-medians = np.median(wfs,axis=0)
-wfs -= medians
-
-#get dust suspects
-threshold = 0.001
-suspects = np.arange(len(wfs[:,0]))[(wfs[:,0]>threshold)+
-                                    (wfs[:,1]>threshold)+
-                                    (wfs[:,2]>threshold)]
-
-#flag as sure dust or sure no dust or unknown based on the cnn results
-# TBD save no-dusts from CNN
+"""
 
 
-epochs = cdf_file.varget("Epoch")
-dates = tt2000_to_date(epochs)
-channel_ref = cdf_file.varget("CHANNEL_REF")[0]
-print(cdf_file.varget("sampling_rate")[0])
-print(dates[2]-dates[1])
+#main(sys.argv[1],sys.argv[2])
 
 
 
-
-
-plot_from, plot_to = 0, len(wfs[:,0]) #249230, 249270
-print(dates[plot_from])
-for i in range(3):
-    plt.plot(dates[plot_from:plot_to],
-             wfs[plot_from:plot_to,i],
-             label = channel_ref[i])
-plt.xticks(rotation=90)
-plt.legend()
-plt.show()
