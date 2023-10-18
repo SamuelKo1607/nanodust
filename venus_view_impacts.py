@@ -166,16 +166,60 @@ def oversampling_flux(time,flux,window=7,order=2):
     return oversampled_time, oversampled_flux
 
 
-def plot_venus_approach_profiles(deltadays=14,
-                                 figures_location = "998_generated\\figures\\"):
+def plot_approach_profiles(approaches,
+                           deltadays=14,
+                           target = "Venus encounter",
+                           distance_measure = None,
+                           errors_on_flux = None,
+                           force_ylim = None,
+                           spline = True,
+                           cscheme = "blue",
+                           figures_location = "998_generated\\figures\\",
+                           name = 'venus_approach_profiles.png'):
     """
-    A procedure to show daily impac counts and how they evolve close to Venus,
-    one panel for each Venus encounter.
+    A procedure to show daily impact counts and how they evolve close to 
+    a point, like an approach. One panel for each encounter is shown.
 
     Parameters
     ----------
+    approaches : list of float
+        Julin date of the approaches in question.
+
     deltadays : int, optional
         How many days before and after encounter to show. The default is 14.
+
+    target : str, optional
+        Name of the body of interest, such as Venus. The default is "Venus".
+
+    distance_measure : function : jd -> float, optional
+        A function to measure the distance on the day of interes.
+        Julian date of the approach is the input, while distance in AU
+        is the output. The default in None.
+
+    errors_on_flux : function Day -> np.array of float, optional
+        A function that can return the errorbars on the day. 
+        The output must be tThe errorbars, 
+        lower and upper bound, shape (2, n). 
+        The default in None.
+
+    force_ylim : float, optional
+        If used, it will force the force_ylim value as the value for the 
+        common upper y limit. Bottom is 0. The default is None.
+    
+    spline : boolean, optional
+        If True, the spline is drawn. The default is True.
+
+    cscheme : str, optional
+        Color scheme. The default is "blue".
+
+    figures_location : str
+        The directory where to put the plot. 
+        The default is "998_generated\\figures\\"
+
+    name : str
+        Name of the plot to be saved. 
+        The default is 'venus_approach_profiles.png'.
+        
 
     Returns
     -------
@@ -187,11 +231,12 @@ def plot_venus_approach_profiles(deltadays=14,
     for day in days:
         jds.append(YYYYMMDD2jd(day.YYYYMMDD))
     jds = np.array(jds)
-    approaches = get_venus_approaches(distance=0.1)
+
     approaches = approaches[(approaches>min(jds))*(max(jds)>approaches)]
-    approach_distances = get_venus_distances(approaches)
-    fig = plt.figure(figsize=(3,2))
-    gs = fig.add_gridspec(3,1,hspace=0.05)
+    if distance_measure != None:
+        approach_distances = distance_measure(approaches)
+    fig = plt.figure(figsize=(3,2*len(approaches)/3))
+    gs = fig.add_gridspec(len(approaches),1,hspace=0.05)
     ax = gs.subplots(sharex=True)
     for i in range(len(approaches)):
         filtered_days = list(filter(lambda x:
@@ -203,26 +248,34 @@ def plot_venus_approach_profiles(deltadays=14,
         for day in filtered_days:
             delta.append((day.date-jd2date(approaches[i]).date()).days)
             flux.append(day.impact_count/day.duty_hours*24)
-        oversampled_time, oversampled_flux = oversampling_flux(delta,flux)
-        errors = get_errors(filtered_days)
-        ax[i].plot(oversampled_time, oversampled_flux,
-                   lw=0.5,color="red")
-        ax[i].errorbar(delta,flux, errors,
-                       color="blue",alpha=0.2,elinewidth=1,lw=0)
-        ax[i].scatter(delta,flux,color="blue")
+        if spline:
+            oversampled_time, oversampled_flux = oversampling_flux(delta,flux)
+            ax[i].plot(oversampled_time, oversampled_flux,
+                       lw=0.5,color="red")
+        if errors_on_flux != None:
+            errors = errors_on_flux(filtered_days)
+            ax[i].errorbar(delta,flux, errors,
+                           color=cscheme,alpha=0.2,elinewidth=1,lw=0)
+        ax[i].scatter(delta,flux,color=cscheme)
         ax[i].text(.05, .75, str(jd2date(approaches[i]))[:16],
-                   fontsize="small", ha='left',
+                   fontsize="x-small", ha='left',
                    transform=ax[i].transAxes)
-        ax[i].text(.95, .75, str(int(approach_distances[i]*au))+" km",
-                   fontsize="small", ha='right',
-                   transform=ax[i].transAxes)
+        if distance_measure != None:
+            ax[i].text(.97, .75, str(int(approach_distances[i]*au))+" km",
+                       fontsize="x-small", ha='right',
+                       transform=ax[i].transAxes)
 
     for a in ax:
-        a.set_ylim(0,740)
-        a.vlines(0,0,740,color="gray",lw=0.5,alpha=0.3,zorder=1,ls="dotted")
-    ax[-1].set_xlabel("Days since Venus encounter [day]")
+        a.set_ylim(bottom=0)
+        if force_ylim != None:
+            a.set_ylim(top=force_ylim)
+        top = a.get_ylim()[1]
+        a.set_xlim(-deltadays,deltadays)
+        a.vlines(0,0,top,color="gray",lw=0.5,alpha=0.3,zorder=1,ls="dotted")
+        a.set_ylim(bottom=0,top=top)
+    ax[-1].set_xlabel("Days since "+target+" [day]")
     ax[len(ax)//2].set_ylabel("Impact rate [$day^{-1}$]")
-    fig.savefig(figures_location+'venus_approach_profiles.png',
+    fig.savefig(figures_location+name,
                 format='png', dpi=600)
     fig.show()
 
@@ -295,11 +348,13 @@ def plot_venus_impacts(zoom=0.0005,
 
 
 
-
-plot_venus_approach_profiles()
-
-plot_venus_impacts(date_from = dt.datetime(2022,9,4,0,0),
-                   date_to = dt.datetime(2022,9,4,6,0))
+if __name__ == "__main__":
+    plot_approach_profiles(get_venus_approaches(distance=0.1),
+                           distance_measure=get_venus_distances,
+                           errors_on_flux = get_errors)
+    
+    plot_venus_impacts(date_from = dt.datetime(2022,9,4,0,0),
+                       date_to = dt.datetime(2022,9,4,6,0))
 
 
 
