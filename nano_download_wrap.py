@@ -148,5 +148,8 @@ def main(YYYYMMDD_from,
             idate += dt.timedelta(days=1)
     
     
-main(sys.argv[1],sys.argv[2])
+if __name__ == "__main__":
+    YYYYMMDD_from = sys.argv[1]
+    YYYYMMDD_to = sys.argv[2]
+    main(YYYYMMDD_from, YYYYMMDD_to)
 
