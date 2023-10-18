@@ -250,4 +250,6 @@ def main(target_input_cdf,
         # need to aggregate the report files, I need that to search globally
 
 
-main(sys.argv[1],sys.argv[2])    
+
+if __name__ == "__main__":
+    main(sys.argv[1],sys.argv[2])    
