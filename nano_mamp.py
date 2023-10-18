@@ -7,12 +7,12 @@ import glob
 
 from keys import cdf_mamp_location
 
+from nano_load_days import Impact
+from nano_load_days import Day
 from nano_load_days import get_cdfs_to_analyze
 from nano_load_days import load_all_days
 from nano_load_days import load_list
 from nano_load_days import save_list
-from nano_load_days import Impact
-from nano_load_days import Day
 from conversions import tt2000_to_date
 
 
@@ -277,7 +277,9 @@ for cdf in cdfs:
 """
 
 
-#main(sys.argv[1],sys.argv[2])
-
+if __name__ == "__main__":
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
+    main(input_file, output_file)
 
 
