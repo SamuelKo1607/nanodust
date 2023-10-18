@@ -198,6 +198,50 @@ def get_mamp_suspects(wfs,threshold = 0.002):
     return suspects
 
 
+def print_suspects_stat(location = "998_generated\\mamp_processed\\",
+                        date_from = dt.datetime(2010,1,1),
+                        date_to = dt.datetime(2050,1,1)):
+    """
+    To get a quick overview of the suspects extracted from MAMP 
+    and how they compare to the data from Days.
+
+    Parameters
+    ----------
+    location : str, optional
+        The data directory. Default is "998_generated\\mamp_processed\\".
+    date_from : dt.datetime
+        The first relevant moment (filtering the instances by >=).
+    date_to : dt.datetime
+        The last relevant moment (filtering the instances by <=).
+
+    Returns
+    -------
+    None.
+
+    """
+
+    all_suspects = load_all_suspects(location,
+                                     date_from,
+                                     date_to)
+
+    all_days = load_all_days()
+
+    YYYYMMDDs = list(set([suspect.YYYYMMDD for suspect in all_suspects]))
+
+    for YYYYMMDD in YYYYMMDDs:
+        print(YYYYMMDD)
+        day = [day for day in all_days if day.YYYYMMDD == YYYYMMDD][0]
+        suspects = [suspect for suspect in all_suspects if suspect.YYYYMMDD == YYYYMMDD]
+        confirmed_positive = [suspect for suspect in suspects if suspect.classification == 1]
+        confirmed_negative = [suspect for suspect in suspects if suspect.classification == -1]
+        print("impacts as of Day: "+str(len(day.impact_times)))
+        print("positive of MAMP: "+str(len(confirmed_positive))+" / "+str(len(suspects)))
+        print("negative of MAMP: "+str(len(confirmed_negative))+" / "+str(len(suspects)))
+
+
+
+
+
 def main(target_input_cdf,
          target_output_pkl,
          threshold = 0.002):
