@@ -12,6 +12,7 @@ dependencies:
   - numpy-base=1.24.3
   - pandas=2.1.1
   - pickleshare=0.7.5
+  - pip=23.2.1
   - pyqt=5.15.7
   - pyqt5-sip=12.11.0
   - pyreadr=0.4.7
