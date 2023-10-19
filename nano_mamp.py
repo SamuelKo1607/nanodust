@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import datetime as dt
 import sys
 import glob
+import os
 
 from paths import cdf_mamp_location
 
@@ -82,6 +83,8 @@ def load_all_suspects(location = "998_generated\\mamp_processed\\",
     suspects : list of ImpactSuspect object
         Impact suspects, class ImpactSuspect.
     """
+
+    location = os.path.join(os.path.normpath( location ), '')
 
     files = glob.glob(location+"*.pkl")
     suspects = []
@@ -219,6 +222,8 @@ def print_suspects_stat(location = "998_generated\\mamp_processed\\",
     None.
 
     """
+
+    location = os.path.join(os.path.normpath( location ), '')
 
     all_suspects = load_all_suspects(location,
                                      date_from,

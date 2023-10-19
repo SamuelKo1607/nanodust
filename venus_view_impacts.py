@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import glob
 import numpy as np
+import os
 import datetime as dt
 from scipy import interpolate
 from scipy.signal import argrelextrema
@@ -55,6 +56,9 @@ def solo_vse(jd,
         Is either np.shape(solo_vse(jd))==(3,) if input was float or 
         np.shape(solo_vse(jd))==(n,3) if the input was array of len(jd)==n.
     """
+
+    location = os.path.join(os.path.normpath( location ), '')
+
     try:
         f_vse_x = load_list("vse_x.pkl",location)[0]
         f_vse_y = load_list("vse_y.pkl",location)[0]
@@ -226,6 +230,9 @@ def plot_approach_profiles(approaches,
     None.
 
     """
+
+    figures_location = os.path.join(os.path.normpath( figures_location ), '')
+
     days = load_all_days()
     jds = []
     for day in days:
@@ -298,6 +305,9 @@ def plot_venus_impacts(zoom=0.0005,
     None.
 
     """
+
+    figures_location = os.path.join(os.path.normpath( figures_location ), '')
+
     solo_jd, solo_hae = load_hae(solo_ephemeris_file)
 
     solo_jd_oversampled = np.arange(min(solo_jd[solo_jd<2460104.5]),

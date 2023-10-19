@@ -7,6 +7,7 @@ import pickle
 from scipy.signal import butter
 from scipy.signal import sosfilt
 from scipy import stats
+import os
 
 from conversions import tt2000_to_date
 from conversions import YYYYMMDD2jd
@@ -101,6 +102,8 @@ def save_list(data,name,location=""):
     -------
     none
     """
+
+    location = os.path.join(os.path.normpath( location ), '')
     
     with open(location+name, "wb") as f:  
         pickle.dump(data, f)
@@ -123,6 +126,8 @@ def load_list(name,location):
     data : list
         The data to be loaded. In our context: mostly a list of Impact objects.
     """
+
+    location = os.path.join(os.path.normpath( location ), '')
     
     with open(location+name, "rb") as f:
         data = pickle.load(f)
@@ -143,6 +148,9 @@ def load_all_days(days_location = "998_generated\\days\\"):
     days : list of Day object
         Measurement days, class Day from nano_load_days.
     """
+
+    days_location = os.path.join(os.path.normpath( days_location ), '')
+
     files = glob.glob(days_location+"*.pkl")
     days = []
     for file in files:
@@ -172,6 +180,9 @@ def load_all_impacts(impacts_location = "998_generated\\impacts\\",
     impacts : list of Impact object
         Impact data points, class Impact from nano_load_days.
     """
+
+    impacts_location = os.path.join(os.path.normpath( impacts_location ), '')
+
     files = glob.glob(impacts_location+"*.pkl")
     impacts = []
     for file in files:
@@ -343,6 +354,9 @@ def get_duty_hours(YYYYMMDD,location):
         Number of duty hours, usually around 1.5.
 
     """
+
+    location = os.path.join(os.path.normpath( location ), '')
+
     stats_file_name_pattern = (location+
                              "solo_L2_rpw-tds-surv-stat_"+
                              YYYYMMDD+"*.cdf")

@@ -6,6 +6,7 @@ import datetime as dt
 from scipy import interpolate
 from scipy.signal import argrelextrema
 from scipy.signal import savgol_filter
+import os
 
 from paths import solo_ephemeris_file
 
@@ -36,7 +37,8 @@ peri_jd = 2459000.5+np.array([255,470,666,865,1045,1224])
 
 
 
-def plot_flux(days, figures_location = "998_generated\\figures\\"):
+def plot_flux(days,
+              figures_location = "998_generated\\figures\\"):
     """
     A plot of daily flux is made with the data from the provided days files.
 
@@ -52,6 +54,9 @@ def plot_flux(days, figures_location = "998_generated\\figures\\"):
     -------
     None.
     """
+
+    figures_location = os.path.join(os.path.normpath( figures_location ), '')
+
     dates, counts, duty_hours, sampling_rates = extract_variables_from_days(days)
 
     err_plusminus_flux = get_errors(days)
@@ -121,6 +126,9 @@ def solo_hae(jd,
         Is either np.shape(solo_hae(jd))==(3,) if input was float or 
         np.shape(solo_hae(jd))==(n,3) if the input was array of len(jd)==n.
     """
+
+    location = os.path.join(os.path.normpath( location ), '')
+
     try:
         f_hae_x = load_list("hae_x.pkl",location)[0]
         f_hae_y = load_list("hae_y.pkl",location)[0]
