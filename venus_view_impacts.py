@@ -25,8 +25,8 @@ import figure_standards as figstd
 axes_size = figstd.set_rcparams_dynamo(mpl.rcParams, num_cols=1, ls='thin')
 mpl.rcParams['figure.dpi'] = 600
 
-from keys import venus_ephemeris_file
-from keys import solo_ephemeris_file
+from paths import venus_ephemeris_file
+from paths import solo_ephemeris_file
 from nano_ephemeris import au
 
 
