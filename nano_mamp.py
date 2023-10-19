@@ -5,7 +5,7 @@ import datetime as dt
 import sys
 import glob
 
-from keys import cdf_mamp_location
+from paths import cdf_mamp_location
 
 from nano_load_days import Impact
 from nano_load_days import Day

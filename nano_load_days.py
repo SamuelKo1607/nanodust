@@ -13,12 +13,12 @@ from conversions import YYYYMMDD2jd
 from conversions import YYYYMMDD2date
 from nano_ephemeris import fetch_heliocentric_solo
 
-from keys import cdf_stat_location
-from keys import cdf_tswf_e_location
-from keys import lo_f_cat_location
-from keys import lo_f_cat_new_location
-from keys import hi_f_cat_location
-from keys import solo_ephemeris_file
+from paths import cdf_stat_location
+from paths import cdf_tswf_e_location
+from paths import lo_f_cat_location
+from paths import lo_f_cat_new_location
+from paths import hi_f_cat_location
+from paths import solo_ephemeris_file
 
 
 

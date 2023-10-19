@@ -10,9 +10,9 @@ import sunpy.net.attrs as a
 from conversions import YYYYMMDD2date
 from conversions import date2YYYYMMDD
 from solo_download import fetch
-from keys import cdf_stat_location
-from keys import cdf_tswf_e_location
-from keys import cdf_mamp_location
+from paths import cdf_stat_location
+from paths import cdf_tswf_e_location
+from paths import cdf_mamp_location
 
 
 

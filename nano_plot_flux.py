@@ -7,7 +7,7 @@ from scipy import interpolate
 from scipy.signal import argrelextrema
 from scipy.signal import savgol_filter
 
-from keys import solo_ephemeris_file
+from paths import solo_ephemeris_file
 
 from nano_load_days import load_all_days
 from nano_load_days import load_list

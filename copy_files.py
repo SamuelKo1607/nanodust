@@ -2,7 +2,7 @@ import shutil
 import cdflib
 import glob
 import numpy as np
-from keys import cdf_tswf_e_location
+from paths import cdf_tswf_e_location
 from nano_load_days import get_cdfs_to_analyze
 
 

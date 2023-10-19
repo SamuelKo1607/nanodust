@@ -3,8 +3,8 @@ import cdflib
 
 from nano_load_days import get_cdfs_to_analyze
 
-from keys import cdf_stat_location
-from keys import cdf_tswf_e_location
+from paths import cdf_stat_location
+from paths import cdf_tswf_e_location
 
 
 
