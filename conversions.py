@@ -1,7 +1,7 @@
 import numpy as np
 import calendar
 import datetime as dt
-from spacepy import pycdf
+#from spacepy import pycdf
 
 def zrot(th,rad=False): #in degrees
     if rad:
@@ -78,17 +78,32 @@ def hae2vse(hae_target,hae_venus):
     vse = np.matmul(rotation_matrix,vae)
     return vse
 
-def tt2000_to_date(epoch): #some adapted C routine
-    x=pycdf.Library()
-    epoch = np.array(epoch)
-    epoch = epoch.astype(np.longlong)
-    x=x.v_tt2000_to_datetime(epoch)
+# def tt2000_to_date(epoch): #some adapted C routine
+#     x=pycdf.Library()
+#     epoch = np.array(epoch)
+#     epoch = epoch.astype(np.longlong)
+#     x=x.v_tt2000_to_datetime(epoch)
+#     return x
+
+def tt2000_to_date(epoch): #less accurate but easier dependencies
+    j2000 = dt.datetime(2000,1,1,11,58,50,816000) #tt2000 epoch 0
+    delta_microseconds = epoch/1000
+    f = lambda x : j2000 + dt.timedelta(microseconds = x)
+    v_f = np.vectorize(f)
+    x = v_f(delta_microseconds)
     return x
 
-def date_to_tt2000(date): #some adapted C routine
-    x=pycdf.Library()
-    x=x.v_datetime_to_tt2000(date)
-    return x
+# def date_to_tt2000(date): #some adapted C routine
+#     x=pycdf.Library()
+#     x=x.v_datetime_to_tt2000(date)
+#     return x
+
+def date_to_tt2000(date): #less accurate but easier dependencies
+    j2000 = dt.datetime(2000,1,1,11,58,50,816000) #tt2000 epoch 0
+    deltas = date - j2000
+    helper = np.vectorize(lambda x: int(x.total_seconds()*1000000000))
+    nsecs = helper(deltas)
+    return nsecs
 
 def date2unixtime(date): 
     return calendar.timegm(date.utctimetuple())
