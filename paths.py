@@ -8,3 +8,6 @@ lo_f_cat_new_location = os.path.join(os.path.normpath(  "..\\data\\solo\\rpw\\Am
 hi_f_cat_location = os.path.join(os.path.normpath(      "..\\data\\solo\\rpw\\Amplitude data\\nanodust_classification\\all_events\\"), '')
 solo_ephemeris_file = os.path.join(os.path.normpath(    "..\\data\\ephemerides\\solo_fine_ephemeris_noheader.txt"), '')
 venus_ephemeris_file = os.path.join(os.path.normpath(   "..\\data\\ephemerides\\venus_fine_ephemeris_noheader.txt"), '')
+
+if __name__ == "__main__":
+    print(cdf_stat_location)
