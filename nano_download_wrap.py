@@ -101,13 +101,23 @@ def download_update_cdf(start_date,
                cdf_tswf_e_location,
                cdf_mamp_location]
 
-    for i in range(len(folders)):
+    for product in data_products:
+        if product == "rpw-tds-surv-stat":
+            folder = cdf_stat_location
+        elif product == "rpw-tds-surv-tswf-e":
+            folder = cdf_tswf_e_location
+        elif product == "rpw-tds-surv-mamp":
+            folder = cdf_mamp_location
+        else:
+            raise Exception("Unexpected product")
+        print("Downloading "+product+" to "+folder)
+        
         soar_download(start_date,
                       end_date,
                       "RPW",
                       2,
-                      data_products[i],
-                      folders[i])
+                      product,
+                      folder)
 
 
 def main(YYYYMMDD_from,
