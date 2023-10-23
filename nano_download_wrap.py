@@ -148,5 +148,9 @@ def main(YYYYMMDD_from,
 if __name__ == "__main__":
     YYYYMMDD_from = sys.argv[1]
     YYYYMMDD_to = sys.argv[2]
-    main(YYYYMMDD_from, YYYYMMDD_to)
+    if len(sys.argv)>3:
+        prod = sys.argv[3]
+        main(YYYYMMDD_from, YYYYMMDD_to, [prod])
+    else:
+        main(YYYYMMDD_from, YYYYMMDD_to)
 
