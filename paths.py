@@ -20,3 +20,5 @@ venus_ephemeris_file = os.path.join("..","data","ephemerides","venus_fine_epheme
 
 if __name__ == "__main__":
     print(cdf_stat_location)
+    print(cdf_mamp_location)
+    print(cdf_tswf_e_location)
