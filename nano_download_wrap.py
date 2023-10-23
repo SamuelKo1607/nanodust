@@ -70,7 +70,10 @@ def soar_download(dt_from,
 
 
 def download_update_cdf(start_date,
-                        end_date):
+                        end_date,
+                        data_products = ["rpw-tds-surv-stat",
+                                         "rpw-tds-surv-tswf-e",
+                                         "rpw-tds-surv-mamp"]):
     """
     The function to download all the SOAR files 
     that are nneded fro the nanodust analysis.
@@ -82,6 +85,12 @@ def download_update_cdf(start_date,
     end_date : datetime.datetime()
         The last downloaded day (inclusive).
 
+    data_products: list of string
+        The list of data products to download. Defaults to: 
+            ["rpw-tds-surv-stat",
+             "rpw-tds-surv-tswf-e",
+             "rpw-tds-surv-mamp"].
+
     Returns
     -------
     None.
@@ -91,10 +100,6 @@ def download_update_cdf(start_date,
     folders = [cdf_stat_location,
                cdf_tswf_e_location,
                cdf_mamp_location]
-
-    data_products = ["rpw-tds-surv-stat",
-                     "rpw-tds-surv-tswf-e",
-                     "rpw-tds-surv-mamp"]
 
     for i in range(len(folders)):
         soar_download(start_date,
@@ -106,7 +111,10 @@ def download_update_cdf(start_date,
 
 
 def main(YYYYMMDD_from,
-         YYYYMMDD_to):
+         YYYYMMDD_to,
+         data_products = ["rpw-tds-surv-stat",
+                          "rpw-tds-surv-tswf-e",
+                          "rpw-tds-surv-mamp"]):
     """
     The function to go through all the days in the range and chechk whether 
     the data for the day si downlaoded, downloads if it was not downloaded 
@@ -119,6 +127,12 @@ def main(YYYYMMDD_from,
     YYYYMMDD_to : str / int
         Date to (inclusive).
 
+    data_products: list of string
+        The list of data products to download. Defaults to: 
+            ["rpw-tds-surv-stat",
+             "rpw-tds-surv-tswf-e",
+             "rpw-tds-surv-mamp"].
+
     Returns
     -------
     None.
@@ -127,7 +141,7 @@ def main(YYYYMMDD_from,
 
     start_date = YYYYMMDD2date(YYYYMMDD_from)
     end_date = YYYYMMDD2date(YYYYMMDD_to)
-    download_update_cdf(start_date,end_date)
+    download_update_cdf(start_date,end_date,data_products)
 
     
     
