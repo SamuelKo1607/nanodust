@@ -91,7 +91,10 @@ def tt2000_to_date(epoch): #less accurate but easier dependencies
     f = lambda x : j2000 + dt.timedelta(microseconds = x)
     v_f = np.vectorize(f)
     x = v_f(delta_microseconds)
-    return x
+    if bool(np.shape(epoch)):
+        return x
+    else:
+        return x.tolist()
 
 # def date_to_tt2000(date): #some adapted C routine
 #     x=pycdf.Library()
@@ -103,9 +106,12 @@ def date_to_tt2000(date): #less accurate but easier dependencies
     deltas = date - j2000
     helper = np.vectorize(lambda x: int(x.total_seconds()*1000000000))
     nsecs = helper(deltas)
-    return nsecs
+    if bool(np.shape(date)):
+        return nsecs
+    else:
+        return nsecs.tolist()
 
-def date2unixtime(date): 
+def date2unixtime(date):
     return calendar.timegm(date.utctimetuple())
 
 def unix2date(unixsec):
