@@ -1,10 +1,14 @@
+from paths import cdf_mamp_location
+from paths import cdf_tswf_e_location
+
+
 # Define input and output directories for padding
-padding_datadir = "C:/Users/skoci/Disk Google/000 Škola/UIT/getting data/solo/rpw/tds_wf_e/"
+padding_datadir = cdf_tswf_e_location
 padding_statsdir = "998_generated/stats/"
 
 
 # Define input and output directories for mamp
-mamp_datadir = "C:/Users/skoci/Disk Google/000 Škola/UIT/getting data/solo/rpw/mamp/"
+mamp_datadir = cdf_mamp_location
 mamp_statsdir = "998_generated/mamp_processed/"
 
 
@@ -18,6 +22,10 @@ rule all:
     input:
         expand(padding_statsdir+"{output}.txt", output=padding_data),
         expand(mamp_statsdir+"{output}.pkl", output=mamp_data)
+	shell:
+		"""
+		python nano_mamp.py #creates the pickle for all the mamp candidates
+		"""
 
 
 #rule to do padding
