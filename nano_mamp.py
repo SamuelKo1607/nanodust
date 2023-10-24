@@ -63,7 +63,7 @@ class ImpactSuspect:
 
 
 
-def load_all_suspects(location = "998_generated\\mamp_processed\\",
+def load_all_suspects(location = os.path.join("998_generated","mamp_processed",""),
                       date_from = dt.datetime(2010,1,1),
                       date_to = dt.datetime(2050,1,1)):
     """
@@ -119,7 +119,7 @@ def is_confirmed(dust_datetimes,
         The times of interest.
     batch : int
         how many suspect_datetimes to process at once. Done due to ram, with
-        200 batches, one instance takes up about 400MiB
+        200 batches, one instance takes up about 2GiB
     threshold : dt.timedelta
         The maximum difference, inclusive. If datetime2_list is a list,
         then true is returned if there is a match between datetime_1 and
@@ -201,9 +201,10 @@ def get_mamp_suspects(wfs,threshold = 0.002):
     return suspects
 
 
-def print_suspects_stat(location = "998_generated\\mamp_processed\\",
-                        date_from = dt.datetime(2010,1,1),
-                        date_to = dt.datetime(2050,1,1)):
+def suspects_stat(location = os.path.join("998_generated","mamp_processed",""),
+                  target_location = os.path.join("data_synced",""),
+                  date_from = dt.datetime(2010,1,1),
+                  date_to = dt.datetime(2050,1,1)):
     """
     To get a quick overview of the suspects extracted from MAMP 
     and how they compare to the data from Days.
@@ -223,11 +224,11 @@ def print_suspects_stat(location = "998_generated\\mamp_processed\\",
 
     """
 
-    location = os.path.join(os.path.normpath( location ), '')
-
     all_suspects = load_all_suspects(location,
                                      date_from,
                                      date_to)
+
+    save_list(all_suspects, "all_suspects.pkl" ,target_location)
 
     all_days = load_all_days()
 
@@ -239,17 +240,14 @@ def print_suspects_stat(location = "998_generated\\mamp_processed\\",
         suspects = [suspect for suspect in all_suspects if suspect.YYYYMMDD == YYYYMMDD]
         confirmed_positive = [suspect for suspect in suspects if suspect.classification == 1]
         confirmed_negative = [suspect for suspect in suspects if suspect.classification == -1]
-        print("impacts as of Day: "+str(len(day.impact_times)))
-        print("positive of MAMP: "+str(len(confirmed_positive))+" / "+str(len(suspects)))
-        print("negative of MAMP: "+str(len(confirmed_negative))+" / "+str(len(suspects)))
-
-
+        print("impacts on Day: "+str(len(day.impact_times)))
+        print(f"conf. pos/neg {len(confirmed_positive)}/{len(confirmed_negative)} positive of {len(suspects)} MAMP suspects")
 
 
 
 def main(target_input_cdf,
          target_output_pkl,
-         threshold = 0.002):
+         threshold = 0.05):
     """
     The main routine, takes the given MAMP cdf, finds all the dust suspects 
     based on the amplitudes and the threshold. 
@@ -325,10 +323,13 @@ for cdf in cdfs:
 
 """
 
-
+#%%
 if __name__ == "__main__":
-    input_file = sys.argv[1]
-    output_file = sys.argv[2]
-    main(input_file, output_file)
+    if len(sys.argv)>1:
+        input_file = sys.argv[1]
+        output_file = sys.argv[2]
+        main(input_file, output_file)
+    else:
+        suspects_stat()
 
 
