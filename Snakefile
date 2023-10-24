@@ -22,6 +22,8 @@ rule all:
     input:
         expand(padding_statsdir+"{output}.txt", output=padding_data),
         expand(mamp_statsdir+"{output}.pkl", output=mamp_data)
+	conda:
+        "environment.yml"
 	shell:
 		"""
 		python nano_mamp.py #creates the pickle for all the mamp candidates
