@@ -134,7 +134,7 @@ def load_list(name,location):
     return data
 
 
-def load_all_days(days_location = "998_generated\\days\\"):
+def load_all_days(days_location = os.path.join("998_generated","days","")):
     """
     The function to load all the measurement days data.
 
@@ -160,7 +160,7 @@ def load_all_days(days_location = "998_generated\\days\\"):
     return days
 
 
-def load_all_impacts(impacts_location = "998_generated\\impacts\\",
+def load_all_impacts(impacts_location = os.path.join("998_generated","impacts",""),
                      date_from = dt.datetime(2010,1,1),
                      date_to = dt.datetime(2050,1,1)):
     """
@@ -639,6 +639,6 @@ def main():
             all_missing_files.append(missing_files)
     return all_missing_files
 
-
-
-#missing_files = main()
+#%%
+if __name__ == "__main__":
+    missing_files = main()
