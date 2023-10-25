@@ -1,0 +1,2 @@
+Index,Label,Amplitude
+1,1,8.21092072874308
