@@ -634,8 +634,12 @@ def main():
             print(short_name)
             print(err)
         else:
-            save_list(impacts,short_name+"_impacts.pkl","998_generated\\impacts\\")
-            save_list(day,short_name+"_day.pkl","998_generated\\days\\")
+            save_list(impacts,
+                      short_name+"_impacts.pkl",
+                      os.path.join("998_generated","impacts",""))
+            save_list(day,
+                      short_name+"_day.pkl",
+                      os.path.join("998_generated","days",""))
             all_missing_files.append(missing_files)
     return all_missing_files
 
