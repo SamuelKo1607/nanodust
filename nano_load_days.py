@@ -104,7 +104,7 @@ def save_list(data,name,location=""):
     """
 
     location = os.path.join(os.path.normpath( location ), '')
-    
+    os.makedirs(os.path.dirname(location+name), exist_ok=True)
     with open(location+name, "wb") as f:  
         pickle.dump(data, f)
         
