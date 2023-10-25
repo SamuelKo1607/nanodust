@@ -87,7 +87,7 @@ def load_hae(ephemeris_file):
     return jd, hae/au
 
 
-def fetch_heliocentric_solo(file,location = "998_generated\\assets\\"):
+def fetch_heliocentric_solo(file,location = os.path.join("998_generated","assets","")):
     """
     This function returns helicoentric distance & phase, in addition to 
     radial and tangential velocities in a form of 1D functions. Be careful, 
