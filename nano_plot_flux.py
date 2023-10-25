@@ -19,6 +19,7 @@ from nano_load_days import get_errors
 from nano_load_days import extract_variables_from_days
 from nano_ephemeris import load_hae
 from conversions import jd2date
+from conversions import date2jd
 import figure_standards as figstd
 from venus_view_impacts import plot_approach_profiles
 
@@ -38,7 +39,9 @@ peri_jd = 2459000.5+np.array([255,470,666,865,1045,1224])
 
 
 def plot_flux(days,
-              figures_location = "998_generated\\figures\\"):
+              figures_location = "998_generated\\figures\\",
+              overplot = None,
+              styles = None):
     """
     A plot of daily flux is made with the data from the provided days files.
 
@@ -50,10 +53,22 @@ def plot_flux(days,
     figures_location : str, optional
         Where to put the wrawn figure. Default is "figures_location".
 
+    overplot : list of functions: np.array of dt.datetime -> np.array of float, optional
+        A list of functons that will be used to overplot over the data. 
+        Default is None, in which case nothing is overplotted.
+
+    styles : list of str, optional
+        list of fmt string, such as "g:2" or something, this assigns 
+        a style to the overplot lines. Default is None, in which case "b-" 
+        is used.
+
     Returns
     -------
     None.
     """
+
+    if styles == None and overplot != None:
+        styles = ["b-"]*len(overplot)
 
     figures_location = os.path.join(os.path.normpath( figures_location ), '')
 
@@ -76,6 +91,9 @@ def plot_flux(days,
     ax.tick_params(axis='x',labeltop=False,labelbottom=True)
     ax.tick_params(axis='y',labelleft=True,labelright=False)
     ax.tick_params(axis='y',which="minor",left=True,right=False)
+    if overplot!= None:
+        for i, line in enumerate(overplot):
+            ax.plot(dates,line(dates),styles[i],lw=1,ms=0)
     ax.scatter(dates,counts/duty_hours*24,
                c=colorcodes, s=1,zorder=100)
     for color in np.unique(colorcodes):
@@ -203,13 +221,64 @@ def get_sun_approaches(distance=0.6):
     return approaches
 
 
+def build_bayesian_fit(fit_data):
+    """
+    A wrapper function to give the fit result of the Bayesian fitting. 
+    Requires loading the data in the form of X, Y1, Y2, Y3; handily provided 
+    by a different script of the "dust" project. 
 
+    Parameters
+    ----------
+    array_of_datetimes : np.array of dt.datetime
+        Usually something corresponding to the X-axis that is to be plotted.
+    fit_data : list [0:3] of array of float, identical array lengths.
+        Underlying data for the curves to be plotted. Usually comes from 
+        a pickle provided by a different script, shaping the output of a
+        Bayesian fitting routine. The first array is the underlying 
+        julian dates, while the other 3 are the curves.
+
+    Returns
+    -------
+    v_f_mean_dt : function : np.array of dt.datetime -> np.array of float
+        The flux in /day, bottom 5% quantile as provided by the Baysian fitting.
+    v_f_q5_dt : function : np.array of dt.datetime -> np.array of float
+        The flux in /day, mean as provided by the Baysian fitting.
+    v_f_q95_dt : function : np.array of dt.datetime -> np.array of float
+        The flux in /day, top 5% quantile as provided by the Baysian fitting.
+
+    """
+    jd_span = fit_data[0]
+    mean_s = fit_data[1]
+    q5_s = fit_data[2]
+    q95_s = fit_data[3]
+
+    f_mean = interpolate.interp1d(jd_span, mean_s, fill_value="extrapolate", kind=3)
+    f_q5 = interpolate.interp1d(jd_span, q5_s, fill_value="extrapolate", kind=3)
+    f_q95 = interpolate.interp1d(jd_span, q95_s, fill_value="extrapolate", kind=3)
+
+    v_f_mean = np.vectorize(f_mean)
+    v_f_q5 = np.vectorize(f_q5)
+    v_f_q95 = np.vectorize(f_q95)
+
+    v_f_mean_dt = lambda x : v_f_mean(date2jd(x)) #x is dt.datetime
+    v_f_q5_dt = lambda x : v_f_q5(date2jd(x)) #x is dt.datetime
+    v_f_q95_dt = lambda x : v_f_q95(date2jd(x)) #x is dt.datetime
+
+    return v_f_mean_dt,v_f_q5_dt,v_f_q95_dt
 
 
 
 
 if __name__ == "__main__":
-    plot_flux(load_all_days())
+
+    #loading the bayesian fit data
+    mean, bottom5, top5 = build_bayesian_fit(load_list("bayesian_fit_orig.pkl",
+                                                       os.path.join("data_synced","")
+                                                       ))
+
+    plot_flux(load_all_days(),
+              overplot=[bottom5, mean, top5],
+              styles=["k:","k-","k:"])
 
     plot_approach_profiles(get_sun_approaches(distance=0.6),
                            deltadays = 14,
@@ -219,6 +288,8 @@ if __name__ == "__main__":
                            cscheme = "forestgreen",
                            distance_measure = get_heliocentric_distances,
                            errors_on_flux = get_errors,
+                           overplot=[bottom5, mean, top5],
+                           styles=["k:","k-","k:"],
                            figures_location = "998_generated\\figures\\",
                            name = 'perihelia_approach_profiles.png')
 
