@@ -112,7 +112,11 @@ def date_to_tt2000(date): #less accurate but easier dependencies
         return nsecs.tolist()
 
 def date2unixtime(date):
-    return calendar.timegm(date.utctimetuple())
+    if isinstance(date,dt.date):
+        datetime = dt.datetime.combine(date, dt.datetime.min.time())
+        return calendar.timegm(datetime.utctimetuple())
+    else:
+        return calendar.timegm(date.utctimetuple())
 
 def unix2date(unixsec):
     return dt.datetime.utcfromtimestamp(unixsec)
@@ -133,7 +137,11 @@ def jd2date(jd):
     return dt.datetime.utcfromtimestamp((jd - 2440587.5) * 86400.0)
 
 def date2jd(date):
-    return (date2unixtime(date)/ 86400.0 ) + 2440587.5
+    if isinstance(date,np.ndarray):
+        unixtimes = np.array([date2unixtime(d) for d in date])
+        return (unixtimes/ 86400.0 ) + 2440587.5
+    else:
+        return (date2unixtime(date)/ 86400.0 ) + 2440587.5
 
 def jd_to_tt2000(jd):
     return unix_to_tt2000(jd2unix(jd))
