@@ -120,13 +120,15 @@ def fetch_heliocentric_solo(file,location = os.path.join("998_generated","assets
         with open(location+"f_tan_v.pkl", "rb") as f:
             f_tan_v = pickle.load(f)
     except:
+        print("assets missing, loading "+file)
         jd_ephem, hae_r, hae_v, hae_phi, radial_v, tangential_v, hae_theta = load_ephemeris(file)
         heliocentric_distance = np.sqrt(hae_r[:,0]**2+hae_r[:,1]**2+hae_r[:,2]**2)/au #in au
         f_hel_r = interpolate.interp1d(jd_ephem,heliocentric_distance,fill_value="extrapolate",kind=3)
         f_hel_phi = interpolate.interp1d(jd_ephem,hae_phi,fill_value="extrapolate",kind=3)
         f_rad_v = interpolate.interp1d(jd_ephem,radial_v,fill_value="extrapolate",kind=3)
         f_tan_v = interpolate.interp1d(jd_ephem,tangential_v,fill_value="extrapolate",kind=3)
-        
+
+        print("constructing assets")
         os.makedirs(location, exist_ok=True)
         with open(location+"f_hel_r.pkl", "wb") as f:
             pickle.dump(f_hel_r, f)
