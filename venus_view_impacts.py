@@ -178,6 +178,8 @@ def plot_approach_profiles(approaches,
                            force_ylim = None,
                            spline = True,
                            cscheme = "blue",
+                           overplot = None,
+                           styles = None,
                            figures_location = "998_generated\\figures\\",
                            name = 'venus_approach_profiles.png'):
     """
@@ -216,6 +218,15 @@ def plot_approach_profiles(approaches,
     cscheme : str, optional
         Color scheme. The default is "blue".
 
+    overplot : list of functions: np.array of dt.datetime -> np.array of float, optional
+        A list of functons that will be used to overplot over the data. 
+        Default is None, in which case nothing is overplotted.
+
+    styles : list of str, optional
+        list of fmt string, such as "g:2" or something, this assigns 
+        a style to the overplot lines. Default is None, in which case "b-" 
+        is used.
+
     figures_location : str
         The directory where to put the plot. 
         The default is "998_generated\\figures\\"
@@ -230,6 +241,10 @@ def plot_approach_profiles(approaches,
     None.
 
     """
+
+    if styles == None and overplot != None:
+        styles = ["b-"]*len(overplot)
+
 
     figures_location = os.path.join(os.path.normpath( figures_location ), '')
 
@@ -263,6 +278,10 @@ def plot_approach_profiles(approaches,
             errors = errors_on_flux(filtered_days)
             ax[i].errorbar(delta,flux, errors,
                            color=cscheme,alpha=0.2,elinewidth=1,lw=0)
+        if overplot != None:
+            dates = np.array([day.date for day in filtered_days])
+            for j, line in enumerate(overplot):
+                ax[i].plot(delta,line(dates),styles[j],lw=0.5)
         ax[i].scatter(delta,flux,color=cscheme)
         ax[i].text(.05, .75, str(jd2date(approaches[i]))[:16],
                    fontsize="x-small", ha='left',
