@@ -1,11 +1,12 @@
 import numpy as np
 import pandas as pd
 import sys
-sys.path.insert(0, 'C:\\Users\\skoci\\Documents\\dust\\000_commons')
-sys.path.insert(0, 'C:\\Users\\skoci\\Documents\\dust\\003_solar_orbiter')
+#sys.path.insert(0, 'C:\\Users\\skoci\\Documents\\dust\\000_commons')
+#sys.path.insert(0, 'C:\\Users\\skoci\\Documents\\dust\\003_solar_orbiter')
 import cdflib
 import csv
 import glob
+import os
 import matplotlib.pyplot as plt
 from scipy import signal as signal
 
@@ -90,7 +91,9 @@ def subsample(wf):
     return resampled
     
 
-def plot_and_save(wfs,name,location="998_generated\\waveforms\\TDS_other\\"):
+def plot_and_save(wfs,
+                  name,
+                  location=os.path.join("998_generated","waveforms","TDS_other","")):
     """
     A simple plotting (and saving) of the data.
     
@@ -123,7 +126,7 @@ def plot_and_save(wfs,name,location="998_generated\\waveforms\\TDS_other\\"):
     ax[2].plot(mono_3,lw=0.1)
     for ax in ax:
         ax.set_ylim(-ylim,ylim)
-    fig.savefig(location+"plots\\"+name+".png", format='png', dpi=600)
+    fig.savefig(os.path.join(location,"plots")+name+".png", format='png', dpi=600)
     plt.close()
 
 
@@ -181,9 +184,9 @@ def main(target_input_cdf,
                 
                 #assigned dust / no dust:
                 if quality_fact[i] == 65535:
-                    folder = "C:\\Users\\skoci\\Documents\\nanodust\\998_generated\\waveforms\\TDS_dust\\"
+                    folder = os.path.join("998_generated","waveforms","TDS_dust","")
                 else:
-                    folder = "C:\\Users\\skoci\\Documents\\nanodust\\998_generated\\waveforms\\TDS_other\\"
+                    folder = os.path.join("998_generated","waveforms","TDS_other","")
                 
                 #decide on the treatment
                 if len(e[i][0])==16384 and np.isclose(262137.5,
