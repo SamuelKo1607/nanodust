@@ -126,7 +126,8 @@ def fetch_heliocentric_solo(file,location = os.path.join("998_generated","assets
         f_hel_phi = interpolate.interp1d(jd_ephem,hae_phi,fill_value="extrapolate",kind=3)
         f_rad_v = interpolate.interp1d(jd_ephem,radial_v,fill_value="extrapolate",kind=3)
         f_tan_v = interpolate.interp1d(jd_ephem,tangential_v,fill_value="extrapolate",kind=3)
-
+        
+        os.makedirs(location, exist_ok=True)
         with open(location+"f_hel_r.pkl", "wb") as f:
             pickle.dump(f_hel_r, f)
         with open(location+"f_hel_phi.pkl", "wb") as f:
