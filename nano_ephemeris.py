@@ -2,6 +2,7 @@ import numpy as np
 import csv
 from scipy import interpolate
 import pickle
+import os
 
 au = 149597870.7 #astronomical unit, km
 
