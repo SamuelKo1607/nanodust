@@ -628,46 +628,6 @@ def process_cdf(cdf_file):
     return day, impacts, missing_files
 
 
-def make_flux_to_fit_inla(days,
-                          name = "flux_readable.csv",
-                          location = os.path.join("data_synced","")):
-    """
-    Creates a CSV in a reasonably readable format, to use in an external
-    application, such as RStudio. 
-
-    Parameters
-    ----------
-    days : list of Day
-        Impact data to include.
-    name : str, optional
-        the name of the file. The default is "flux_readable.csv".
-    location : str, optional
-        The path where to put the result. 
-        The default is os.path.join("data_synced","").
-
-    Returns
-    -------
-    None.
-
-    """
-
-    with open(location+name, 'w', newline='') as f:
-        writer = csv.writer(f, delimiter=',')
-        writer.writerow(["Julian date",
-                         "Fluxes [/day]",
-                         "Radial velocity [km/s]",
-                         "Tangential velocity [km/s]",
-                         "Radial distance [au]",
-                         "Detection time [hours]"])
-        for day in days:
-            writer.writerow([str(date2jd(day.date)),
-                             str(day.impact_count),
-                             str(day.heliocentric_radial_speed),
-                             str(day.heliocentric_tangential_speed),
-                             str(day.heliocentric_distance),
-                             str(day.duty_hours)])
-
-
 def main():
     all_missing_files = []
     for file in get_cdfs_to_analyze(cdf_tswf_e_location):
@@ -692,13 +652,6 @@ def main():
 if __name__ == "__main__":
     missing_files = main()
 
-    try:
-        with open(os.path.join("data_synced","")+"flux_readable.csv") as f:
-            print("readable file OK:")
-            print(f)
-    except:
-        print("saving readable file")
-        make_flux_to_fit_inla(load_all_days(name = "flux_readable.csv",
-                                            location = os.path.join("data_synced","")))
+
 
 

@@ -202,7 +202,6 @@ def get_mamp_suspects(wfs,threshold = 0.002):
 
 
 def suspects_stat(location = os.path.join("998_generated","mamp_processed",""),
-                  target_location = os.path.join("data_synced",""),
                   date_from = dt.datetime(2010,1,1),
                   date_to = dt.datetime(2050,1,1)):
     """
@@ -227,8 +226,6 @@ def suspects_stat(location = os.path.join("998_generated","mamp_processed",""),
     all_suspects = load_all_suspects(location,
                                      date_from,
                                      date_to)
-
-    save_list(all_suspects, "all_suspects.pkl" ,target_location)
 
     all_days = load_all_days()
 
