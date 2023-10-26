@@ -131,12 +131,15 @@ def load_list(name,location):
     data : list
         The data to be loaded. In our context: mostly a list of Impact objects.
     """
-
-    location = os.path.join(os.path.normpath( location ), '')
-    
-    with open(location+name, "rb") as f:
-        data = pickle.load(f)
-    return data
+    if location != None:
+        location = os.path.join(os.path.normpath( location ), '')
+        with open(location+name, "rb") as f:
+            data = pickle.load(f)
+        return data
+    else:
+        with open(name, "rb") as f:
+            data = pickle.load(f)
+        return data
 
 
 def load_all_days(days_location = os.path.join("998_generated","days","")):
