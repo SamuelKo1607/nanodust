@@ -126,7 +126,7 @@ def plot_and_save(wfs,
     ax[2].plot(mono_3,lw=0.1)
     for ax in ax:
         ax.set_ylim(-ylim,ylim)
-    fig.savefig(os.path.join(location,"plots")+name+".png", format='png', dpi=600)
+    fig.savefig(os.path.join(location,"plots","")+name+".png", format='png', dpi=600)
     plt.close()
 
 
