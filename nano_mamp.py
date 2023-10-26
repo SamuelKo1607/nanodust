@@ -272,42 +272,47 @@ def main(target_input_cdf,
     channel_refs = cdf_file.varget("CHANNEL_REF")
     sampling_rates = cdf_file.varget("sampling_rate")
 
+    suspect_events = []
     suspects = get_mamp_suspects(wfs,threshold=threshold)
     epochs = cdf_file.varget("Epoch")
     suspect_epochs = epochs[suspects]
-    suspect_datetimes = tt2000_to_date(suspect_epochs)
 
-    days = load_all_days()
-    dust_times = [day.impact_times for day in days]
-    flat_dust_times = np.array([item for sublist in dust_times for item in sublist])
-    non_dust_times = [day.non_impact_times for day in days]
-    flat_non_dust_times = np.array([item for sublist in non_dust_times for item in sublist])
+    if len(suspects)>0:
+        suspect_datetimes = tt2000_to_date(suspect_epochs)
+    
+        days = load_all_days()
+        dust_times = [day.impact_times for day in days]
+        flat_dust_times = np.array([item for sublist in dust_times for item in sublist])
+        non_dust_times = [day.non_impact_times for day in days]
+        flat_non_dust_times = np.array([item for sublist in non_dust_times for item in sublist])
+    
+        confirmed_classification = is_confirmed(flat_dust_times,
+                                                flat_non_dust_times,
+                                                suspect_datetimes)
+    
 
-    confirmed_classification = is_confirmed(flat_dust_times,
-                                            flat_non_dust_times,
-                                            suspect_datetimes)
-
-    suspect_events = []
-
-    for i, datetime in enumerate(suspect_datetimes):
-        channel_ref = channel_refs[i]
-        sampling_rate = sampling_rates[i]
-        period = min([epochs[i]-epochs[i-1],epochs[i+1]-epochs[i]])
-        classification = confirmed_classification[i]
-        amplitudes = wfs[i,:]
-
-        suspect = ImpactSuspect(datetime,
-                                sampling_rate,
-                                period,
-                                i,
-                                classification,
-                                channel_ref,
-                                amplitudes)
-
-        suspect_events.append(suspect)
+    
+        for i, datetime in enumerate(suspect_datetimes):
+            channel_ref = channel_refs[i]
+            sampling_rate = sampling_rates[i]
+            period = min([epochs[i]-epochs[i-1],epochs[i+1]-epochs[i]])
+            classification = confirmed_classification[i]
+            amplitudes = wfs[i,:]
+    
+            suspect = ImpactSuspect(datetime,
+                                    sampling_rate,
+                                    period,
+                                    i,
+                                    classification,
+                                    channel_ref,
+                                    amplitudes)
+    
+            suspect_events.append(suspect)
+    else:
+        pass
 
     save_list(suspect_events, target_output_pkl)
-
+    
 
 
 """
