@@ -691,4 +691,14 @@ def main():
 #%%
 if __name__ == "__main__":
     missing_files = main()
-    make_flux_to_fit_inla(load_all_days())
+
+    try:
+        with open(os.path.join("data_synced","")+"flux_readable.csv") as f:
+            print("readable file OK:")
+            print(f)
+    except:
+        print("saving readable file")
+        make_flux_to_fit_inla(load_all_days(name = "flux_readable.csv",
+                                            location = os.path.join("data_synced","")))
+
+
