@@ -124,7 +124,7 @@ def aggregate_mamp_suspects(location = os.path.join("998_generated","mamp_proces
         save_list(all_suspects, "all_suspects.pkl", target_location)
     else:
         try:
-            with open(target_location+"all_suspects.csv") as f:
+            with open(target_location+"all_suspects.pkl") as f:
                 print("mamp suspects OK:")
                 print(f)
         except:
