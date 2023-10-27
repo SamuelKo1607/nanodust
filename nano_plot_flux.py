@@ -15,11 +15,14 @@ from nano_load_days import load_list
 from nano_load_days import save_list
 from nano_load_days import Impact
 from nano_load_days import Day
+from nano_mamp import ImpactSuspect
 from nano_load_days import get_errors
 from nano_load_days import extract_variables_from_days
 from nano_ephemeris import load_hae
+from nano_mamp import load_all_suspects
 from conversions import jd2date
 from conversions import date2jd
+from conversions import YYYYMMDD2date
 import figure_standards as figstd
 from venus_view_impacts import plot_approach_profiles
 
@@ -39,7 +42,7 @@ peri_jd = 2459000.5+np.array([255,470,666,865,1045,1224])
 
 
 def plot_flux(days,
-              figures_location = "998_generated\\figures\\",
+              figures_location = os.path.join("998_generated","figures",""),
               overplot = None,
               styles = None):
     """
@@ -125,9 +128,83 @@ def plot_flux(days,
     fig.show()
 
 
+def plot_mamp_suspects(all_suspects,
+                       compare_days = None,
+                       overplot = None,
+                       styles = None,
+                       figures_location = os.path.join("998_generated","figures","")):
+    """
+    A plot of MAMP suspect flux, compared to CNN impacts.
+    
+    Parameters
+    ----------
+    all_suspects : list of ImpactSuspect
+        Impact suspects, class ImpactSuspect from nano_mamp.
+    
+    compare_days : list of Day, optional
+        Measurement days, class Day from nano_load_days. Default is None, in 
+        which case nothing is shown.
+
+    overplot : list of functions: np.array of dt.datetime -> np.array of float, optional
+        A list of functons that will be used to overplot over the data. 
+        Default is None, in which case nothing is overplotted.
+
+    styles : list of str, optional
+        list of fmt string, such as "g:2" or something, this assigns 
+        a style to the overplot lines. Default is None, in which case "b-" 
+        is used.
+
+    figures_location : str, optional
+        Where to put the wrawn figure. Default is "998_generated\\figures\\".
+    
+    Returns
+    -------
+    None.
+    """
+
+    if styles == None and overplot != None:
+         styles = ["b-"]*len(overplot)
+
+    YYYYMMDDs = [suspect.YYYYMMDD for suspect in all_suspects]
+    if compare_days != None:
+        YYYYMMDDs += [day.YYYYMMDD for day in compare_days]
+    unique_YYYYMMDDs = np.unique(np.array(YYYYMMDDs))
+    if compare_days != None:
+        counts_days = np.zeros(len(unique_YYYYMMDDs),dtype=float)
+    counts_suspects = np.zeros(len(unique_YYYYMMDDs),dtype=float)
+    uniqe_dates = np.zeros(len(unique_YYYYMMDDs),dtype=dt.datetime)
+    for i, YYYYMMDD in enumerate(unique_YYYYMMDDs):
+        counts_suspects[i] += len([suspect for suspect in all_suspects if suspect.YYYYMMDD == YYYYMMDD])
+        uniqe_dates[i] = YYYYMMDD2date(YYYYMMDD)
+        if counts_suspects[i] == 0:
+            counts_suspects[i] = np.nan
+        if compare_days != None:
+            counts_days[i] += sum([day.impact_count * 24 / day.duty_hours
+                                   for day in compare_days if day.YYYYMMDD == YYYYMMDD])
+            if counts_days[i] == 0:
+                counts_days[i] = np.nan
+
+
+    fig, ax = plt.subplots()
+    ax.plot(uniqe_dates,counts_suspects,label="MAMP suspects >50mV")
+    if compare_days != None:
+        ax.plot(uniqe_dates,counts_days,label="CNN impacts (/24h equiv.)")
+    if overplot!= None:
+        for i, line in enumerate(overplot):
+            ax.plot(uniqe_dates,line(uniqe_dates),
+                    styles[i],ms=0,label = "Bayseian model")
+    ax.legend(fontsize="x-small")
+    ax.set_ylim(0,1500)
+    ax.set_ylabel("Impact rate [$day^{-1}$]", fontsize="medium")
+    ax.tick_params(axis='x',labelrotation=60)
+    fig.tight_layout()
+    fig.savefig(figures_location+'suspects_vs_cnn.png', format='png', dpi=600)
+    fig.show()
+
+
 def solo_hae(jd,
              solo_ephemeris_file=solo_ephemeris_file,
-             location = "998_generated\\assets\\"):
+             location = os.path.join("998_generated","assets","")):
     """
     A function to get the Solar Orbiter's position in HAE coordinates as
     a function of time. If the assets are not ready, 
@@ -293,6 +370,10 @@ if __name__ == "__main__":
                            figures_location = "998_generated\\figures\\",
                            name = 'perihelia_approach_profiles.png')
 
+    plot_mamp_suspects(load_all_suspects(),
+                       compare_days = load_all_days(),
+                       overplot=[mean],
+                       styles=["k-"])
 
 
 
