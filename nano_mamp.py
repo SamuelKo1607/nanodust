@@ -62,12 +62,12 @@ class ImpactSuspect:
 
 
 
-
-def load_all_suspects(location = os.path.join("998_generated","mamp_processed",""),
-                      date_from = dt.datetime(2010,1,1),
-                      date_to = dt.datetime(2050,1,1)):
+def load_all_suspects_particular(location = os.path.join("998_generated","mamp_processed",""),
+                                 date_from = dt.datetime(2010,1,1),
+                                 date_to = dt.datetime(2050,1,1)):
     """
-    The function to load all the suspected impacts as per MAMP.
+    The function to load all the suspected impacts as per MAMP, loads all the
+    pickles from the given directory.
 
     Parameters
     ----------
@@ -98,6 +98,48 @@ def load_all_suspects(location = os.path.join("998_generated","mamp_processed","
 
     return filtered
 
+
+def load_all_suspects(location = os.path.join("998_generated","mamp_processed",""),
+                      aggregate_file = os.path.join("data_synced","all_suspects.pkl"),
+                      date_from = dt.datetime(2010,1,1),
+                      date_to = dt.datetime(2050,1,1)):
+    """
+    
+
+    Parameters
+    ----------
+    location : str, optional
+        The data directory. Default is "998_generated\\mamp_processed\\".
+    aggregate_file : TYPE, optional
+        The aggregate (synced) data directory. 
+        The default is os.path.join("data_synced","all_suspects.pkl").
+    date_from : dt.datetime
+        The first relevant moment (filtering the instances by >=).
+    date_to : dt.datetime
+        The last relevant moment (filtering the instances by <=).
+
+    Returns
+    -------
+    all_suspects : list of ImpactSuspect
+        All the impact suspects.
+
+    """
+
+    try:
+        with open(aggregate_file, "rb") as f:
+            print("loaded aggregate file:")
+            print(f)
+            all_suspects = load_list(aggregate_file,location=None)
+
+    except:
+        print("loading non-aggregate files:")
+        print(location)
+        all_suspects = load_all_suspects_particular(location)
+
+    finally:
+        all_suspects = [i for i in all_suspects if date_from <= i.datetime <= date_to ]
+
+    return all_suspects
 
 
 def is_confirmed(dust_datetimes,
@@ -165,7 +207,6 @@ def is_confirmed(dust_datetimes,
     return classification
 
 
-
 def get_mamp_suspects(wfs,threshold = 0.002):
     """
     The function to return the indices of suspected dust impacts
@@ -201,9 +242,10 @@ def get_mamp_suspects(wfs,threshold = 0.002):
     return suspects
 
 
-def suspects_stat(location = os.path.join("998_generated","mamp_processed",""),
-                  aggregate_file = os.path.join("data_synced","all_suspects.pkl"),
-                  date_from = dt.datetime(2010,1,1),
+
+
+
+def suspects_stat(date_from = dt.datetime(2010,1,1),
                   date_to = dt.datetime(2050,1,1)):
     """
     To get a quick overview of the suspects extracted from MAMP 
@@ -211,8 +253,6 @@ def suspects_stat(location = os.path.join("998_generated","mamp_processed",""),
 
     Parameters
     ----------
-    location : str, optional
-        The data directory. Default is "998_generated\\mamp_processed\\".
     date_from : dt.datetime
         The first relevant moment (filtering the instances by >=).
     date_to : dt.datetime
@@ -224,31 +264,23 @@ def suspects_stat(location = os.path.join("998_generated","mamp_processed",""),
 
     """
 
-    try:
-        with open(aggregate_file, "wb") as f:
-            print("loaded aggregate file:")
-            print(f)
-            all_suspects = load_list(aggregate_file,location=None)
+    all_suspects = load_all_suspects(date_from = date_from,
+                                     date_to = date_to)
+    all_days = load_all_days()
+    YYYYMMDDs = list(set([suspect.YYYYMMDD for suspect in all_suspects]))
 
-    except:
-        print("loading non-aggregate files:")
-        print(location)
-        all_suspects = load_all_suspects(location)
-
-    finally:
-        all_suspects = [i for i in all_suspects if date_from <= i.datetime <= date_to ]
-        all_days = load_all_days()
-        YYYYMMDDs = list(set([suspect.YYYYMMDD for suspect in all_suspects]))
-    
-        for YYYYMMDD in YYYYMMDDs:
-            print(YYYYMMDD)
-            day = [day for day in all_days if day.YYYYMMDD == YYYYMMDD][0]
+    for YYYYMMDD in YYYYMMDDs:
+        print(YYYYMMDD)
+        day_match = [day for day in all_days if day.YYYYMMDD == YYYYMMDD]
+        if len(day_match)>0:
+            day = day_match[0]
             suspects = [suspect for suspect in all_suspects if suspect.YYYYMMDD == YYYYMMDD]
             confirmed_positive = [suspect for suspect in suspects if suspect.classification == 1]
             confirmed_negative = [suspect for suspect in suspects if suspect.classification == -1]
             print("impacts on Day: "+str(len(day.impact_times)))
-            print(f"conf. pos/neg {len(confirmed_positive)}/{len(confirmed_negative)} positive of {len(suspects)} MAMP suspects")
-
+            print(f"conf. pos/neg {len(confirmed_positive)}/{len(confirmed_negative)} of {len(suspects)} MAMP suspects")
+        else:
+            print("Day data not available")
 
 def main(target_input_cdf,
          target_output_pkl,
