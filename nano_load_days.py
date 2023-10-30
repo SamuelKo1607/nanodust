@@ -30,11 +30,23 @@ class Impact:
     Pretty self explanatory, each instance holds the attributes of one assumed 
     dust impact. 
     """
-    def __init__(self, datetime, sampling_rate, amplitude, index):
+    def __init__(self,
+                 datetime,
+                 sampling_rate,
+                 amplitude,
+                 symmetry,
+                 polarity,
+                 wf_orig,
+                 wf_filtered,
+                 index):
         self.datetime = datetime
         self.YYYYMMDD = datetime.strftime('%Y%m%d')
         self.sampling_rate = sampling_rate
         self.amplitude = amplitude
+        self.symmetry = symmetry
+        self.polarity = polarity
+        self.wf_orig = wf_orig
+        self.wf_filtered = wf_filtered
         self.index = index
         self.produced = dt.datetime.now()
 
@@ -380,10 +392,11 @@ def get_duty_hours(YYYYMMDD,location):
         return duty_hours
 
 
-def find_amplitude(smooth_1,
-                   smooth_2,
-                   smooth_3):
+def analyze(smooth_1,
+            smooth_2,
+            smooth_3):
     """
+    Do the analysis of the given waveforms. 
     Find the primary peak (= body peak) of the impact 
     based on the three waveforms.
 
@@ -400,15 +413,42 @@ def find_amplitude(smooth_1,
     -------
     amplitude : float
         The primary peak amplitude.
+
+    symmetry : float
+        A measure of symmtry: 1.0 means all equal, while 0.0 means one extreme.
+
+    polarity : int
+        An information about the polarity: +1 means all positive, 
+        -1 means all negative and 0 means mixed.
+
     """
 
     max1 = np.max(smooth_1)
     max2 = np.max(smooth_2)
     max3 = np.max(smooth_3)
 
+    #amplitude
     amplitude = np.min([max1,max2,max3])
 
-    return amplitude
+    #symmetry
+    symmetry = amplitude / np.max([max1,max2,max3])
+
+    #polarity
+    extreme_channel = np.argmax([np.max(np.abs(smooth_1)),
+                                 np.max(np.abs(smooth_2)),
+                                 np.max(np.abs(smooth_3))])
+    extreme_index = np.argmax([np.abs(smooth_1),
+                               np.abs(smooth_2),
+                               np.abs(smooth_3)][extreme_channel])
+    pol_1 = np.sign(smooth_1[extreme_index])
+    pol_2 = np.sign(smooth_2[extreme_index])
+    pol_3 = np.sign(smooth_3[extreme_index])
+    pol_max = np.sign([smooth_1[extreme_index],
+                       smooth_2[extreme_index],
+                       smooth_3[extreme_index]][extreme_channel])
+    polarity = pol_max * ( pol_1 == pol_2 == pol_3 )
+
+    return amplitude, symmetry, polarity
 
 
 def process_impact(cdf_file, i):
@@ -439,14 +479,23 @@ def process_impact(cdf_file, i):
     monopole_1 = e[2,:]-e[1,:]
     monopole_2 = e[2,:]
     monopole_3 = e[2,:]-e[1,:]-e[0,:]
+    monopoles = [monopole_1, monopole_2, monopole_3]
 
     smooth_1 = event_filter(monopole_1, time_step)
     smooth_2 = event_filter(monopole_2, time_step)
     smooth_3 = event_filter(monopole_3, time_step)
+    smooths = [smooth_1, smooth_2, smooth_3]
 
-    amplitude = find_amplitude(smooth_1,smooth_2,smooth_3)
+    amplitude, symmetry, polarity = analyze(smooth_1,smooth_2,smooth_3)
 
-    impact = Impact(date_time, sampling_rate, amplitude, i)
+    impact = Impact(date_time,
+                    sampling_rate,
+                    amplitude,
+                    symmetry,
+                    polarity,
+                    monopoles,
+                    smooths,
+                    i)
 
     return impact
 
