@@ -34,19 +34,23 @@ class Impact:
                  datetime,
                  sampling_rate,
                  amplitude,
+                 extreme_index,
                  symmetry,
                  polarity,
                  wf_orig,
                  wf_filtered,
+                 epoch,
                  index):
         self.datetime = datetime
         self.YYYYMMDD = datetime.strftime('%Y%m%d')
         self.sampling_rate = sampling_rate
         self.amplitude = amplitude
+        self.extreme_index = extreme_index
         self.symmetry = symmetry
         self.polarity = polarity
         self.wf_orig = wf_orig
         self.wf_filtered = wf_filtered
+        self.epoch = epoch
         self.index = index
         self.produced = dt.datetime.now()
 
@@ -154,7 +158,7 @@ def load_list(name,location):
         return data
 
 
-def load_all_days(days_location = os.path.join("998_generated","days","")):
+def load_all_days(days_location=os.path.join("998_generated","days","")):
     """
     The function to load all the measurement days data.
 
@@ -347,7 +351,7 @@ def event_filter(wf,time_step):
     bg = np.mean(wf)
     sos = butter(32,7e4,btype="lowpass",fs=(1/(time_step/1e9)),output="sos")
     smooth = sosfilt(sos, wf)-bg
-    #smooth = np.append(smooth[10:],10*[smooth[-1]])
+    smooth = np.append(smooth[16:],16*[smooth[-1]])
     corrected = hipass_correction(smooth,time_step/1e9)
     return corrected
 
@@ -437,9 +441,10 @@ def analyze(smooth_1,
     extreme_channel = np.argmax([np.max(np.abs(smooth_1)),
                                  np.max(np.abs(smooth_2)),
                                  np.max(np.abs(smooth_3))])
-    extreme_index = np.argmax([np.abs(smooth_1),
-                               np.abs(smooth_2),
-                               np.abs(smooth_3)][extreme_channel])
+    # extreme_index = np.argmax([np.abs(smooth_1),
+    #                            np.abs(smooth_2),
+    #                            np.abs(smooth_3)][extreme_channel])
+    extreme_index = np.argmax(np.abs(smooth_1*smooth_2*smooth_3))
     pol_1 = np.sign(smooth_1[extreme_index])
     pol_2 = np.sign(smooth_2[extreme_index])
     pol_3 = np.sign(smooth_3[extreme_index])
@@ -448,7 +453,7 @@ def analyze(smooth_1,
                        smooth_3[extreme_index]][extreme_channel])
     polarity = pol_max * ( pol_1 == pol_2 == pol_3 )
 
-    return amplitude, symmetry, polarity
+    return amplitude, symmetry, polarity, extreme_index
 
 
 def process_impact(cdf_file, i):
@@ -472,9 +477,9 @@ def process_impact(cdf_file, i):
     e = cdf_file.varget("WAVEFORM_DATA_VOLTAGE")[i,:,:]
     sampling_rate = cdf_file.varget("SAMPLING_RATE")[i]
     date_time = tt2000_to_date(cdf_file.varget("EPOCH")[i])
-    epoch_offset = cdf_file.varget("EPOCH_OFFSET")
+    epoch_offset = cdf_file.varget("EPOCH_OFFSET")[i]
 
-    time_step = epoch_offset[i][1]-epoch_offset[i][0]
+    time_step = epoch_offset[1]-epoch_offset[0]
 
     monopole_1 = e[2,:]-e[1,:]
     monopole_2 = e[2,:]
@@ -486,15 +491,19 @@ def process_impact(cdf_file, i):
     smooth_3 = event_filter(monopole_3, time_step)
     smooths = [smooth_1, smooth_2, smooth_3]
 
-    amplitude, symmetry, polarity = analyze(smooth_1,smooth_2,smooth_3)
+    amplitude, symmetry, polarity, extreme_index = analyze(smooth_1,
+                                                           smooth_2,
+                                                           smooth_3)
 
     impact = Impact(date_time,
                     sampling_rate,
                     amplitude,
+                    extreme_index,
                     symmetry,
                     polarity,
                     monopoles,
                     smooths,
+                    epoch_offset,
                     i)
 
     return impact
