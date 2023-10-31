@@ -104,7 +104,7 @@ def load_all_suspects(location = os.path.join("998_generated","mamp_processed","
                       date_from = dt.datetime(2010,1,1),
                       date_to = dt.datetime(2050,1,1)):
     """
-    
+    Loads all suspects into a list of ImpactSuspect.
 
     Parameters
     ----------
