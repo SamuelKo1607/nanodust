@@ -7,6 +7,7 @@ from scipy import interpolate
 from scipy.signal import argrelextrema
 from scipy.signal import savgol_filter
 import os
+import glob
 
 from paths import solo_ephemeris_file
 
@@ -344,8 +345,83 @@ def build_bayesian_fit(fit_data):
     return v_f_mean_dt,v_f_q5_dt,v_f_q95_dt
 
 
+def plot_asymmetric_flux(days,
+                         asymmetry=0.2,
+                         figures_location=os.path.join("998_generated","figures",""),
+                         impacts_location=os.path.join("998_generated","impacts","")):
+    """
+    To study the evolution of the flux of the very asymmetric impacts.
+
+    Parameters
+    ----------
+    days : list of Day object
+        Measurement days, class Day from nano_load_days.
+
+    asymmetry : float, optional
+        The threshold of symmetry to consider something asymmetric. The default is 0.2.
+
+    figures_location : str, optional
+        Where to put the plots. 
+        The default is os.path.join("998_generated","figures","").
+
+    impacts_location : str, optional
+        Where the Impact pickles are. 
+        The default is os.path.join("998_generated","impacts","").
+
+    
+    Returns
+    -------
+    None.
+
+    """
+
+    dates = []
+    total = np.zeros(0, dtype=int)
+    asymmetric = np.zeros(0, dtype=int)
+    duty_hours = np.zeros(0, dtype=float)
+
+    for i, day in enumerate(days):
+        print(f"{i+1}/{len(days)}")
+        file = glob.glob(impacts_location+"*"+day.YYYYMMDD+"*.pkl")
+        if len(file) == 1:
+            impacts = load_list(file[0],"")
+
+            dates.append(day.date)
+            total = np.append(total,len(impacts))
+            asymmetric = np.append(asymmetric,
+                                   len([impact for impact in impacts if impact.symmetry<0.2]))
+            duty_hours = np.append(duty_hours,day.duty_hours)
+        else:
+            pass
+
+    fig = plt.figure()
+    gs = fig.add_gridspec(2,1,wspace=0.1)
+    ax = gs.subplots(sharex=True)
+
+    ax[0].plot(dates,total*24/duty_hours,label="total")
+    ax[0].plot(dates,asymmetric*24/duty_hours,label="asymmetric")
+    ax[0].legend()
+    ax[0].set_ylim(0,1500)
+    ax[0].set_ylabel("Impact rate \n [$day^{-1}$]", fontsize="medium")
+    ax[0].tick_params(axis='x',labelrotation=60)
+
+    ax[1].plot(dates,100*asymmetric/total)
+    ax[1].set_ylim(0,100)
+    ax[1].hlines(0,min(dates),max(dates),color="gray")
+    ax[1].set_ylabel("Asymmetric \n fraction [\%]", fontsize="medium")
+    ax[1].tick_params(axis='x',labelrotation=60)
+
+    fig.tight_layout()
+    fig.savefig(figures_location+'asymmetric_flux.png', format='png', dpi=600)
+    fig.show()
 
 
+
+
+
+
+
+#%%
 if __name__ == "__main__":
 
     #loading the bayesian fit data
@@ -358,7 +434,7 @@ if __name__ == "__main__":
               styles=["k:","k-","k:"])
 
     plot_approach_profiles(get_sun_approaches(distance=0.6),
-                           deltadays = 14,
+                           deltadays = 30,
                            target = "perihelion",
                            force_ylim = 1400,
                            spline = False,
@@ -375,6 +451,6 @@ if __name__ == "__main__":
                        overplot=[mean],
                        styles=["k-"])
 
-
+    plot_asymmetric_flux(load_all_days())
 
 
