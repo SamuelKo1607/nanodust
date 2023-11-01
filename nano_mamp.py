@@ -469,7 +469,8 @@ def main(target_input_cdf,
                                     i,
                                     classification,
                                     channel_ref,
-                                    amplitudes)
+                                    amplitudes,
+                                    thresholds[i])
     
             suspect_events.append(suspect)
     else:
