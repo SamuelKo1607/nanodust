@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import cdflib
 import matplotlib.pyplot as plt
 import datetime as dt
@@ -30,7 +31,8 @@ class ImpactSuspect:
                  index,
                  classification,
                  channel_ref,
-                 amplitudes):
+                 amplitudes,
+                 threshold):
         self.datetime = datetime
         self.YYYYMMDD = datetime.strftime('%Y%m%d')
         self.sampling_rate = sampling_rate
@@ -207,7 +209,79 @@ def is_confirmed(dust_datetimes,
     return classification
 
 
-def get_mamp_suspects(wfs,threshold = 0.002):
+def moving_average(a,n=3):
+    """
+    A simple boxcar moving average for a numpy array, 1D. 
+    Margins left untouched.
+
+    Parameters
+    ----------
+    a : np.array of float, 1D
+        Input 1D array.
+    n : int, optional
+        Widnows lengths. Must be odd. The default is 3.
+
+    Returns
+    -------
+    averaged : np.array of float, 1D
+        Output, averaged array.
+
+    Raises
+    ------
+    ValueError : if n is not odd.
+
+    """
+    if not(n%2):
+        raise ValueError(f"n has to be odd, n = {n} does not conform")
+    elif n==1:
+        averaged = a
+    else:
+        ret = np.cumsum(a)
+        ret[n:] = ret[n:] - ret[:-n]
+        moving_average = ret[n - 1:] / n
+        averaged = np.concatenate((a[:n//2], moving_average, a[-n//2+1:]))
+    return averaged
+
+
+def moving_stdev(a,n=10**2-1):
+    """
+    A simple boxcar moving stdev for a numpy array, 1D. 
+    Margins extrapolated flat.
+
+    Parameters
+    ----------
+    a : np.array of float, 1D
+        Input 1D array.
+    n : int, optional
+        Widnows lengths. Must be odd. The default is 3.
+
+    Returns
+    -------
+    rolling_stdev : np.array of float, 1D
+        Output, rolling stdev array.
+
+    Raises
+    ------
+    ValueError : if n is not odd.
+
+    ValueError : if n is not >1.
+
+    """
+    if not(n%2):
+        raise ValueError(f"n has to be odd, n = {n} does not conform")
+    elif n==1:
+        raise ValueError(f"n has to be >1, n = {n} does not conform")
+    else:
+        ts = pd.Series(a)
+        rolling_std = np.array(ts.rolling(window=n).std())
+        margin_len = (n-1)//2
+        rolling_stdev = np.concatenate((margin_len*[rolling_std[2*margin_len]],
+                                       rolling_std[2*margin_len:],
+                                       margin_len*[rolling_std[-1]]))
+    return rolling_stdev
+
+
+def get_mamp_suspects(wfs,threshold=4,window=10**5-1):
     """
     The function to return the indices of suspected dust impacts
     among the electrical waveforms of MAMP.
@@ -218,31 +292,82 @@ def get_mamp_suspects(wfs,threshold = 0.002):
         The three waveform channels as recorded with MAMP in XLD1.
 
     threshold : float
-        The voltage that triggers a suspect, in Volts.
+        The voltage that triggers a suspect, in sigmas (stdevs).
 
     Returns
     -------
-    suspects : np.array of in, 1D
+    suspects : np.array of int, 1D
         The indices of suspected dust impacts.
+
+    thresholds : np.array of float, 1D
+        The thresholds applicable to every 
     """
 
-    #floor at -0.1V
-    wfs = np.maximum(wfs,np.zeros_like(wfs)-0.1)
+    #floor at 0V
+    wfs_floor = np.maximum(wfs[:,2],np.zeros_like(wfs[:,2]))
 
-    #remove median but remember it for later
-    medians = np.median(wfs,axis=0)
-    wfs -= medians
+    #compute mean
+    wfs_mean = moving_average(wfs_floor,n=window)
+
+    #compute moving stdev
+    wfs_stdev = moving_stdev(wfs_floor,n=window)
+
+    #get effective threshold
+    verge = wfs_mean + threshold*wfs_stdev
 
     #get dust suspects
+    suspects = np.arange(len(wfs_floor))[(wfs[:,2]>verge)]
+    thresholds = verge[suspects]
 
-    suspects = np.arange(len(wfs[:,0]))[(wfs[:,0]>threshold)+
-                                        (wfs[:,1]>threshold)+
-                                        (wfs[:,2]>threshold)]
-
-    return suspects
+    return suspects, thresholds
 
 
+def evaluate_thresholds(cdf_file_path,
+                        sigmas=np.arange(1,10,0.2),
+                        figures_location=os.path.join("998_generated","figures","threshlod_eval","")):
+    """
+    To decide what should be the right sigmas threshold when looking for dust.
 
+    Parameters
+    ----------
+    cdf_file_path : str
+        The path to a MAMP cdf file.
+    sigmas : np.array of float, optional
+        The sigmas to test. The default is np.arange(1,10,0.2).
+    figures_location : str, optional
+        The path there to save the figure. 
+        The default is os.path.join("998_generated","figures","").
+
+    Raises
+    ------
+    Exception
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+
+    cdf_file = cdflib.CDF(cdf_file_path)
+    wfs = cdf_file.varget("WAVEFORM_DATA")[:,0:3]
+    channel_refs = cdf_file.varget("CHANNEL_REF")
+    if np.allclose(channel_refs[:,2],2): #XLD1
+        pass
+    else:
+        raise Exception("they are not all XLD1")
+
+    suspects = [np.shape(get_mamp_suspects(wfs,threshold=sigma))[1] for sigma in sigmas]
+    fig,ax = plt.subplots()
+
+    ax.semilogy(sigmas, suspects)
+    ax.set_xlabel("sigmas")
+    ax.set_ylabel("threshold crossings")
+
+    fig.tight_layout()
+    fig.savefig(figures_location+"thresholds_"+cdf_file_path[-21:-4]+'.png',
+                format='png', dpi=600)
+    fig.show()
 
 
 def suspects_stat(date_from = dt.datetime(2010,1,1),
@@ -282,9 +407,10 @@ def suspects_stat(date_from = dt.datetime(2010,1,1),
         else:
             print("Day data not available")
 
+
 def main(target_input_cdf,
          target_output_pkl,
-         threshold = 0.05):
+         threshold=0.05):
     """
     The main routine, takes the given MAMP cdf, finds all the dust suspects 
     based on the amplitudes and the threshold. 
@@ -310,7 +436,10 @@ def main(target_input_cdf,
     sampling_rates = cdf_file.varget("sampling_rate")
 
     suspect_events = []
-    suspects = get_mamp_suspects(wfs,threshold=threshold)
+    if np.allclose(channel_refs[:,2],2): #XLD1
+        suspects,thresholds = get_mamp_suspects(wfs,threshold=threshold)
+    else:
+        suspects,thresholds = [],[]
     epochs = cdf_file.varget("Epoch")
     suspect_epochs = epochs[suspects]
 
@@ -326,9 +455,7 @@ def main(target_input_cdf,
         confirmed_classification = is_confirmed(flat_dust_times,
                                                 flat_non_dust_times,
                                                 suspect_datetimes)
-    
 
-    
         for i, datetime in enumerate(suspect_datetimes):
             channel_ref = channel_refs[i]
             sampling_rate = sampling_rates[i]
