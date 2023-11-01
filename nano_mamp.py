@@ -333,6 +333,9 @@ def evaluate_thresholds(cdf_file_path,
     """
     To decide what should be the right sigmas threshold when looking for dust.
 
+    Call as >>> [evaluate_thresholds(cdf) for cdf in 
+                get_cdfs_to_analyze(cdf_mamp_location,"*mamp*.cdf")]
+
     Parameters
     ----------
     cdf_file_path : str
