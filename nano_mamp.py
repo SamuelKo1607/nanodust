@@ -410,7 +410,7 @@ def suspects_stat(date_from = dt.datetime(2010,1,1),
 
 def main(target_input_cdf,
          target_output_pkl,
-         threshold=0.05):
+         threshold=4):
     """
     The main routine, takes the given MAMP cdf, finds all the dust suspects 
     based on the amplitudes and the threshold. 
@@ -443,7 +443,7 @@ def main(target_input_cdf,
     epochs = cdf_file.varget("Epoch")
     suspect_epochs = epochs[suspects]
 
-    if len(suspects)>0:
+    if len(suspects):
         suspect_datetimes = tt2000_to_date(suspect_epochs)
     
         days = load_all_days()
