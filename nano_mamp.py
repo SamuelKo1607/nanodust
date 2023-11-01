@@ -305,6 +305,11 @@ def get_mamp_suspects(wfs,threshold=4,window=10**5-1):
 
     #floor at 0V
     wfs_floor = np.maximum(wfs[:,2],np.zeros_like(wfs[:,2]))
+    length = len(wfs_floor)
+
+    #check that the window is not too long
+    if window>length//100:
+        window = max(length//100-1+length%2, 3)
 
     #compute mean
     wfs_mean = moving_average(wfs_floor,n=window)
