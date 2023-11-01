@@ -309,7 +309,7 @@ def get_mamp_suspects(wfs,threshold=4,window=10**5-1):
 
     #check that the window is not too long
     if window>length//100:
-        window = max(length//100-1+length%2, 3)
+        window = max(length//100-1+(length//100)%2, 3)
 
     #compute mean
     wfs_mean = moving_average(wfs_floor,n=window)
@@ -426,8 +426,9 @@ def main(target_input_cdf,
         DESCRIPTION.
     target_output_pkl : TYPE
         DESCRIPTION.
-    threshold : float
-        The voltage that triggers a suspect, as in get_mamp_suspects().
+    threshold : float, optional
+        The sigmas that trigger a suspect, as in get_mamp_suspects().
+        The default is 4.
 
     Returns
     -------
