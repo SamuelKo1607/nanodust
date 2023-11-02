@@ -552,6 +552,16 @@ def analyze(smooth_1,
     else:
         antenna_hit = False
 
+    #correlation with a step shape - alternative polarity
+    step = np.concatenate((-1*np.ones(20),np.zeros(5),np.ones(20)))
+    jumpy = np.correlate(smooth_1+smooth_2+smooth_3,step)
+    extreme_index = np.argmax(np.abs(jumpy))+len(step)-5
+    pol_1 = np.sign(smooth_1[extreme_index])
+    pol_2 = np.sign(smooth_2[extreme_index])
+    pol_3 = np.sign(smooth_3[extreme_index])
+    pol_max = np.sign((smooth_1+smooth_2+smooth_3)[extreme_index])
+    polarity = pol_max * ( pol_1 == pol_2 == pol_3 )
+
 
     return amplitude, symmetry, polarity, extreme_index, antenna_hit
 
