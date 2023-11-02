@@ -37,6 +37,7 @@ class Impact:
                  extreme_index,
                  symmetry,
                  polarity,
+                 antenna_hit,
                  wf_orig,
                  wf_filtered,
                  epoch,
@@ -48,6 +49,7 @@ class Impact:
         self.extreme_index = extreme_index
         self.symmetry = symmetry
         self.polarity = polarity
+        self.antenna_hit = antenna_hit
         self.wf_orig = wf_orig
         self.wf_filtered = wf_filtered
         self.epoch = epoch
@@ -100,7 +102,76 @@ class Day:
 
 
 
+def moving_average(a,n=3):
+    """
+    A simple boxcar moving average for a numpy array, 1D. 
+    Margins left untouched.
 
+    Parameters
+    ----------
+    a : np.array of float, 1D
+        Input 1D array.
+    n : int, optional
+        Widnows lengths. Must be odd. The default is 3.
+
+    Returns
+    -------
+    averaged : np.array of float, 1D
+        Output, averaged array.
+
+    Raises
+    ------
+    ValueError : if n is not odd.
+
+    """
+    if not(n%2):
+        raise ValueError(f"n has to be odd, n = {n} does not conform")
+    elif n==1:
+        averaged = a
+    else:
+        ret = np.cumsum(a)
+        ret[n:] = ret[n:] - ret[:-n]
+        moving_average = ret[n - 1:] / n
+        averaged = np.concatenate((a[:n//2], moving_average, a[-n//2+1:]))
+    return averaged
+
+
+def moving_stdev(a,n=10**2-1):
+    """
+    A simple boxcar moving stdev for a numpy array, 1D. 
+    Margins extrapolated flat.
+
+    Parameters
+    ----------
+    a : np.array of float, 1D
+        Input 1D array.
+    n : int, optional
+        Widnows lengths. Must be odd. The default is 3.
+
+    Returns
+    -------
+    rolling_stdev : np.array of float, 1D
+        Output, rolling stdev array.
+
+    Raises
+    ------
+    ValueError : if n is not odd.
+
+    ValueError : if n is not >1.
+
+    """
+    if not(n%2):
+        raise ValueError(f"n has to be odd, n = {n} does not conform")
+    elif n==1:
+        raise ValueError(f"n has to be >1, n = {n} does not conform")
+    else:
+        ts = pd.Series(a)
+        rolling_std = np.array(ts.rolling(window=n).std())
+        margin_len = (n-1)//2
+        rolling_stdev = np.concatenate((margin_len*[rolling_std[2*margin_len]],
+                                       rolling_std[2*margin_len:],
+                                       margin_len*[rolling_std[-1]]))
+    return rolling_stdev
 
 
 def save_list(data,name,location=""):
@@ -349,9 +420,13 @@ def event_filter(wf,time_step):
         The corrected wavefrom.
     """
     bg = np.mean(wf)
+    smooth = wf - bg
+
+    # lowpass
     sos = butter(32,7e4,btype="lowpass",fs=(1/(time_step/1e9)),output="sos")
-    smooth = sosfilt(sos, wf)-bg
-    smooth = np.append(smooth[16:],16*[smooth[-1]])
+    smooth = sosfilt(sos, smooth)
+    smooth = np.append(smooth[14:],14*[smooth[-1]])
+
     corrected = hipass_correction(smooth,time_step/1e9)
     return corrected
 
@@ -431,6 +506,10 @@ def analyze(smooth_1,
     max2 = np.max(smooth_2)
     max3 = np.max(smooth_3)
 
+    #smooth_1_detrend = smooth_1-moving_average(smooth_1,499)
+    #smooth_2_detrend = smooth_2-moving_average(smooth_1,499)
+    #smooth_3_detrend = smooth_3-moving_average(smooth_1,499)
+
     #amplitude
     amplitude = np.min([max1,max2,max3])
 
@@ -441,10 +520,9 @@ def analyze(smooth_1,
     extreme_channel = np.argmax([np.max(np.abs(smooth_1)),
                                  np.max(np.abs(smooth_2)),
                                  np.max(np.abs(smooth_3))])
-    # extreme_index = np.argmax([np.abs(smooth_1),
-    #                            np.abs(smooth_2),
-    #                            np.abs(smooth_3)][extreme_channel])
-    extreme_index = np.argmax(np.abs(smooth_1*smooth_2*smooth_3))
+    extreme_index = np.argmax(np.abs(smooth_1+
+                                     smooth_2+
+                                     smooth_3))
     pol_1 = np.sign(smooth_1[extreme_index])
     pol_2 = np.sign(smooth_2[extreme_index])
     pol_3 = np.sign(smooth_3[extreme_index])
@@ -453,7 +531,29 @@ def analyze(smooth_1,
                        smooth_3[extreme_index]][extreme_channel])
     polarity = pol_max * ( pol_1 == pol_2 == pol_3 )
 
-    return amplitude, symmetry, polarity, extreme_index
+    #antenna hit
+    smooth_sum = smooth_1 + smooth_2 + smooth_3
+    #smooth_sum_detrend = smooth_1_detrend+smooth_2_detrend+smooth_3_detrend
+    extreme_neg_index = np.argmin(smooth_sum)
+    extreme_pos_index = np.argmax(smooth_sum)
+    extreme_neg = smooth_sum[extreme_neg_index]
+    extreme_pos = smooth_sum[extreme_pos_index]
+    symmetry_neg = ( np.min([np.abs(smooth_1[extreme_neg_index]),
+                             np.abs(smooth_2[extreme_neg_index]),
+                             np.abs(smooth_3[extreme_neg_index])] ) /
+                     np.max([np.abs(smooth_1[extreme_neg_index]),
+                             np.abs(smooth_2[extreme_neg_index]),
+                             np.abs(smooth_3[extreme_neg_index])] ) )
+    if (extreme_neg_index < extreme_pos_index and
+        abs(extreme_neg) > abs(extreme_pos) and
+        symmetry_neg < 0.2 and
+        symmetry < 0.2):
+        antenna_hit = True
+    else:
+        antenna_hit = False
+
+
+    return amplitude, symmetry, polarity, extreme_index, antenna_hit
 
 
 def process_impact(cdf_file, i):
@@ -491,9 +591,9 @@ def process_impact(cdf_file, i):
     smooth_3 = event_filter(monopole_3, time_step)
     smooths = [smooth_1, smooth_2, smooth_3]
 
-    amplitude, symmetry, polarity, extreme_index = analyze(smooth_1,
-                                                           smooth_2,
-                                                           smooth_3)
+    amplitude, symmetry, polarity, extreme_index, antenna_hit = analyze(smooth_1,
+                                                                        smooth_2,
+                                                                        smooth_3)
 
     impact = Impact(date_time,
                     sampling_rate,
@@ -501,6 +601,7 @@ def process_impact(cdf_file, i):
                     extreme_index,
                     symmetry,
                     polarity,
+                    antenna_hit,
                     monopoles,
                     smooths,
                     epoch_offset,
@@ -567,6 +668,7 @@ def process_cdf(cdf_file):
     missing_files : list of string
         The files that were expected but were not found.
     """
+
     e = cdf_file.varget("WAVEFORM_DATA_VOLTAGE")
     epochs = cdf_file.varget("EPOCH")
     quality_fact = cdf_file.varget("QUALITY_FACT")
@@ -615,6 +717,7 @@ def process_cdf(cdf_file):
 
         else:
             #new version as of oct/2023
+
             cnn_files_pattern = (lo_f_cat_new_location+
                                      "solo_L2_rpw-tds-surv-tswf-e_"+
                                      YYYYMMDD+"*.txt")
@@ -639,7 +742,6 @@ def process_cdf(cdf_file):
                     impact = process_impact(cdf_file, i)
                     impacts.append(impact)
 
-
     elif all_close and is_xld and is_current and np.isclose(sampling_rate[0],
                                                             524275):
         #higher sampling rate, process and append impacts with Impact object
@@ -658,7 +760,6 @@ def process_cdf(cdf_file):
                 else:
                     pass #not an impact
 
-
     else:
         raise Exception("Undefined data @ "+
                         str(cdf_file.file)[-16:-4])
@@ -672,10 +773,10 @@ def process_cdf(cdf_file):
         duty_hours = get_duty_hours(YYYYMMDD, cdf_stat_location)
         r, v, v_rad = get_solo_state(YYYYMMDD, solo_ephemeris_file)
 
-
     except Exception as err:
         print("day construction failed @ "+YYYYMMDD)
         raise err
+
     else:
         day = Day(date,
                   impact_times,
