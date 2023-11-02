@@ -351,7 +351,7 @@ def suspects_stat(date_from = dt.datetime(2010,1,1),
 
 def main(target_input_cdf,
          target_output_pkl,
-         threshold=4):
+         threshold=6):
     """
     The main routine, takes the given MAMP cdf, finds all the dust suspects 
     based on the amplitudes and the threshold. 
