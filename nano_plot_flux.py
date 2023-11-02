@@ -17,6 +17,7 @@ from nano_load_days import save_list
 from nano_load_days import Impact
 from nano_load_days import Day
 from nano_mamp import ImpactSuspect
+from nano_mamp import moving_average
 from nano_load_days import get_errors
 from nano_load_days import extract_variables_from_days
 from nano_ephemeris import load_hae
@@ -39,7 +40,27 @@ peri_jd = 2459000.5+np.array([255,470,666,865,1045,1224])
 
 
 
+def fill_nan(A):
+    """
+    Interpolate to fill NaNs. Found on stack overflow: 
+    https://stackoverflow.com/questions/6518811/interpolate-nan-values-in-a-numpy-array
 
+    Parameters
+    ----------
+    A : np.array of float
+        The array with some nans.
+
+    Returns
+    -------
+    B : np.array of float
+        The array with no nans, they are interpolated over.
+
+    """
+    inds = np.arange(A.shape[0])
+    good = np.where(np.isfinite(A))
+    f = interpolate.interp1d(inds[good], A[good],bounds_error=False)
+    B = np.where(np.isfinite(A),A,f(inds))
+    return B
 
 
 def plot_flux(days,
@@ -348,7 +369,8 @@ def build_bayesian_fit(fit_data):
 def plot_asymmetric_flux(days,
                          asymmetry=0.2,
                          figures_location=os.path.join("998_generated","figures",""),
-                         impacts_location=os.path.join("998_generated","impacts","")):
+                         impacts_location=os.path.join("998_generated","impacts",""),
+                         perihelia=[]):
     """
     To study the evolution of the flux of the very asymmetric impacts.
 
@@ -368,7 +390,9 @@ def plot_asymmetric_flux(days,
         Where the Impact pickles are. 
         The default is os.path.join("998_generated","impacts","").
 
-    
+    perihelia : list of float
+        List of perihelia dates in JD. If provided, vlines are shown.    
+
     Returns
     -------
     None.
@@ -379,6 +403,7 @@ def plot_asymmetric_flux(days,
     total = np.zeros(0, dtype=int)
     asymmetric = np.zeros(0, dtype=int)
     duty_hours = np.zeros(0, dtype=float)
+    heliocentric_distances = np.zeros(0, dtype=float)
 
     for i, day in enumerate(days):
         print(f"{i+1}/{len(days)}")
@@ -391,6 +416,7 @@ def plot_asymmetric_flux(days,
             asymmetric = np.append(asymmetric,
                                    len([impact for impact in impacts if impact.symmetry<0.2]))
             duty_hours = np.append(duty_hours,day.duty_hours)
+            heliocentric_distances = np.append(heliocentric_distances, day.heliocentric_distance)
         else:
             pass
 
@@ -398,18 +424,37 @@ def plot_asymmetric_flux(days,
     gs = fig.add_gridspec(2,1,wspace=0.1)
     ax = gs.subplots(sharex=True)
 
-    ax[0].plot(dates,total*24/duty_hours,label="total")
-    ax[0].plot(dates,asymmetric*24/duty_hours,label="asymmetric")
-    ax[0].legend()
+    ax[0].plot(dates,total*24/duty_hours,label="Total")
+    ax[0].plot(dates,asymmetric*24/duty_hours,label="Asymmetric")
+    ax[0].legend(fontsize="small")
     ax[0].set_ylim(0,1500)
-    ax[0].set_ylabel("Impact rate \n [$day^{-1}$]", fontsize="medium")
+    ax[0].set_ylabel("Impact\n rate [$day^{-1}$]", fontsize="medium")
     ax[0].tick_params(axis='x',labelrotation=60)
 
-    ax[1].plot(dates,100*asymmetric/total)
+    ax[1].plot(dates,100*asymmetric/total,color="dodgerblue",alpha=0.3)
+    smooth = moving_average(fill_nan(asymmetric/total),29)
+    ax[1].plot(dates[30:-30],100*smooth[30:-30],color="navy")
     ax[1].set_ylim(0,100)
     ax[1].hlines(0,min(dates),max(dates),color="gray")
-    ax[1].set_ylabel("Asymmetric \n fraction [\%]", fontsize="medium")
+    ax[1].set_ylabel("Asymmetric\n fraction [\%]", fontsize="medium")
     ax[1].tick_params(axis='x',labelrotation=60)
+
+    ax_alt = ax[1].twinx()
+    ax_alt.set_ylim(0,1.2)
+    ax_alt.plot(dates,heliocentric_distances,color="darkred")
+    ax_alt.set_ylabel("Heliocentric\n distnace [AU]", fontsize="medium")
+
+    if len(perihelia):
+        for a in ax:
+            for i,aproach in enumerate(perihelia):
+                left,right = a.get_xlim()
+                bottom,top = a.get_ylim()
+                a.vlines(jd2date(aproach),
+                         bottom,top,
+                         color="gray",zorder=1,ls="dotted")
+                a.set_ylim(bottom=bottom,top=top)
+                a.set_xlim(left=left,right=right)
+
 
     fig.tight_layout()
     fig.savefig(figures_location+'asymmetric_flux.png', format='png', dpi=600)
@@ -424,6 +469,8 @@ def plot_asymmetric_flux(days,
 #%%
 if __name__ == "__main__":
 
+    perihelia = get_sun_approaches(distance=0.6)
+
     #loading the bayesian fit data
     mean, bottom5, top5 = build_bayesian_fit(load_list("bayesian_fit_orig.pkl",
                                                        os.path.join("data_synced","")
@@ -433,7 +480,7 @@ if __name__ == "__main__":
               overplot=[bottom5, mean, top5],
               styles=["k:","k-","k:"])
 
-    plot_approach_profiles(get_sun_approaches(distance=0.6),
+    plot_approach_profiles(perihelia,
                            deltadays = 30,
                            target = "perihelion",
                            force_ylim = 1400,
@@ -451,6 +498,7 @@ if __name__ == "__main__":
                        overplot=[mean],
                        styles=["k-"])
 
-    plot_asymmetric_flux(load_all_days())
+    plot_asymmetric_flux(load_all_days(),
+                         perihelia=perihelia)
 
 
