@@ -25,9 +25,9 @@ rule all:
     conda:
 	"environment.yml"
     shell:
-	"""
-	python aggregate.py
-	"""
+		"""
+		python aggregate.py
+		"""
 
 
 #rule to do padding
