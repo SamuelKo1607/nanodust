@@ -137,7 +137,7 @@ class MyGUI:
     def plot_impact(self,
                     impact,
                     xrange=(-900,1600),
-                    colors=["blue","red"],
+                    colors=["red","blue"],
                     labels=["filtered","orig"]):
         """
         Plot the impact in self.canvas. 
@@ -173,7 +173,7 @@ class MyGUI:
         epoch_center = impact.epoch[impact.extreme_index]
         epoch = impact.epoch
 
-        for i,wf in enumerate([impact.wf_filtered,impact.wf_orig]):
+        for i,wf in enumerate([impact.wf_orig,impact.wf_filtered]):
 
             self.ax[0,0].plot((epoch-epoch_center)/1000,wf[0],color=colors[i],lw=0.5)
             self.ax[1,0].plot((epoch-epoch_center)/1000,wf[1],color=colors[i],lw=0.5)
