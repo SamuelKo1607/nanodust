@@ -15,6 +15,8 @@ from nano_load_days import get_cdfs_to_analyze
 from nano_load_days import load_all_days
 from nano_load_days import load_list
 from nano_load_days import save_list
+from nano_load_days import moving_average
+from nano_load_days import moving_stdev
 from conversions import tt2000_to_date
 
 
@@ -209,76 +211,7 @@ def is_confirmed(dust_datetimes,
     return classification
 
 
-def moving_average(a,n=3):
-    """
-    A simple boxcar moving average for a numpy array, 1D. 
-    Margins left untouched.
 
-    Parameters
-    ----------
-    a : np.array of float, 1D
-        Input 1D array.
-    n : int, optional
-        Widnows lengths. Must be odd. The default is 3.
-
-    Returns
-    -------
-    averaged : np.array of float, 1D
-        Output, averaged array.
-
-    Raises
-    ------
-    ValueError : if n is not odd.
-
-    """
-    if not(n%2):
-        raise ValueError(f"n has to be odd, n = {n} does not conform")
-    elif n==1:
-        averaged = a
-    else:
-        ret = np.cumsum(a)
-        ret[n:] = ret[n:] - ret[:-n]
-        moving_average = ret[n - 1:] / n
-        averaged = np.concatenate((a[:n//2], moving_average, a[-n//2+1:]))
-    return averaged
-
-
-def moving_stdev(a,n=10**2-1):
-    """
-    A simple boxcar moving stdev for a numpy array, 1D. 
-    Margins extrapolated flat.
-
-    Parameters
-    ----------
-    a : np.array of float, 1D
-        Input 1D array.
-    n : int, optional
-        Widnows lengths. Must be odd. The default is 3.
-
-    Returns
-    -------
-    rolling_stdev : np.array of float, 1D
-        Output, rolling stdev array.
-
-    Raises
-    ------
-    ValueError : if n is not odd.
-
-    ValueError : if n is not >1.
-
-    """
-    if not(n%2):
-        raise ValueError(f"n has to be odd, n = {n} does not conform")
-    elif n==1:
-        raise ValueError(f"n has to be >1, n = {n} does not conform")
-    else:
-        ts = pd.Series(a)
-        rolling_std = np.array(ts.rolling(window=n).std())
-        margin_len = (n-1)//2
-        rolling_stdev = np.concatenate((margin_len*[rolling_std[2*margin_len]],
-                                       rolling_std[2*margin_len:],
-                                       margin_len*[rolling_std[-1]]))
-    return rolling_stdev
 
 
 def get_mamp_suspects(wfs,threshold=4,window=10**5-1):
