@@ -22,7 +22,12 @@ rule all:
     input:
         expand(padding_statsdir+"{output}.txt", output=padding_data),
         expand(mamp_statsdir+"{output}.pkl", output=mamp_data)
-
+    conda:
+	"environment.yml"
+    shell:
+	"""
+	python aggregate.py
+	"""
 
 
 #rule to do padding
