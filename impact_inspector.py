@@ -97,7 +97,15 @@ class MyGUI:
         self.eventbox.insert(tk.END,"---------------"+"\n")
         for i,index in enumerate(impact_indices):
             polarity = [impact.polarity for impact in self.impacts if impact.index == index][0]
-            self.eventbox.insert(tk.END,f"{index} - pol.: {int(polarity)}\n")
+            if np.sign(polarity)>0:
+                sign = "+"
+            elif np.sign(polarity)<0:
+                sign = "-"
+            else:
+                sign = "0"
+            antenna = [impact.antenna_hit for impact in self.impacts if impact.index == index][0]
+            ant = antenna*"*"
+            self.eventbox.insert(tk.END,f"{index} : {sign} {ant}\n")
         self.eventbox.config(state=tk.DISABLED)
 
 
@@ -122,6 +130,7 @@ class MyGUI:
         self.infobox.insert(tk.END,f"Amplitude: {impact.amplitude:.4f} V\n")
         self.infobox.insert(tk.END,f"Symmetry: {impact.symmetry:.3f}\n")
         self.infobox.insert(tk.END,f"Polarity: {int(impact.polarity)}\n")
+        self.infobox.insert(tk.END,f"Antenna hit: {int(impact.antenna_hit)}\n")
         self.infobox.config(state=tk.DISABLED)
 
 
