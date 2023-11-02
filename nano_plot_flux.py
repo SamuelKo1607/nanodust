@@ -17,7 +17,7 @@ from nano_load_days import save_list
 from nano_load_days import Impact
 from nano_load_days import Day
 from nano_mamp import ImpactSuspect
-from nano_mamp import moving_average
+from nano_load_days import moving_average
 from nano_load_days import get_errors
 from nano_load_days import extract_variables_from_days
 from nano_ephemeris import load_hae
