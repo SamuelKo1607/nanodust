@@ -29,6 +29,7 @@ class ImpactSuspect:
     def __init__(self,
                  datetime,
                  sampling_rate,
+                 coverage_hours,
                  period,
                  index,
                  classification,
@@ -38,6 +39,7 @@ class ImpactSuspect:
         self.datetime = datetime
         self.YYYYMMDD = datetime.strftime('%Y%m%d')
         self.sampling_rate = sampling_rate
+        self.coverage_hours = coverage_hours
         self.period = period
         self.index = index
         self.classification = classification
@@ -211,10 +213,51 @@ def is_confirmed(dust_datetimes,
     return classification
 
 
+def get_coverage(epoch,threshold = 0.95):
+    """
+    A function to get find out the data coverage for a given day, in 
+    case of intermittent coverage.
+
+    Parameters
+    ----------
+    epoch : np.array of float
+        The times of datapoints.
+    threshold : float, optional
+        What fraction of the diffs in time we want to cover. 
+        Too low value gives only approximate result, 
+        but too high may include the long waiting times between the bursts,
+        which would be completely wrong. This is a workaroundsince I did not
+        find the vale of data coverage or something similar in the cdf data.
+        The default is 0.95.
+
+    Returns
+    -------
+    time_covered : float
+        Coverage in hours, can't be much hugher than 24.
+
+    """
+    values, counts = np.unique(np.diff(epoch), return_counts=True)
+    inds = (-counts).argsort()
+    sorted_values = values[inds]
+    sorted_counts = counts[inds]
+
+    sorted_counts_cumsum = np.cumsum(sorted_counts)
+    elements_needed = np.min(
+        np.arange(1,1+len(sorted_counts_cumsum))[
+        sorted_counts_cumsum > threshold*len(epoch)
+        ])
+    weighted_mean_period = np.sum(
+        sorted_counts[0:elements_needed]*sorted_values[0:elements_needed]
+        / np.sum(sorted_counts[0:elements_needed]) )
+
+    time_covered = weighted_mean_period * len(epoch) / 3.6e12
+    return time_covered
 
 
-
-def get_mamp_suspects(wfs,threshold=4,window=10**5-1):
+def get_mamp_suspects(wfs,
+                      threshold=4,
+                      window=10**5-1,
+                      consecutive_allowed=True):
     """
     The function to return the indices of suspected dust impacts
     among the electrical waveforms of MAMP.
@@ -255,13 +298,22 @@ def get_mamp_suspects(wfs,threshold=4,window=10**5-1):
 
     #get dust suspects
     suspects = np.arange(len(wfs_floor))[(wfs[:,2]>verge)]
+
+    if not consecutive_allowed:
+        #abbandon the suspects that are consecutive, both of them
+        neighbouring = np.concatenate( (np.diff(suspects)==1,
+                                       (np.zeros(1,dtype=bool)) ))
+        neighbouring += np.concatenate((np.zeros(1,dtype=bool),neighbouring[:-1]))
+        suspects = suspects[neighbouring==False]
+
+    #get thresholds
     thresholds = verge[suspects]
 
     return suspects, thresholds
 
 
 def evaluate_thresholds(cdf_file_path,
-                        sigmas=np.arange(1,10,0.2),
+                        sigmas=np.arange(1,40,0.4),
                         figures_location=os.path.join("998_generated","figures","threshlod_eval","")):
     """
     To decide what should be the right sigmas threshold when looking for dust.
@@ -351,7 +403,7 @@ def suspects_stat(date_from = dt.datetime(2010,1,1),
 
 def main(target_input_cdf,
          target_output_pkl,
-         threshold=6):
+         threshold=12):
     """
     The main routine, takes the given MAMP cdf, finds all the dust suspects 
     based on the amplitudes and the threshold. 
@@ -384,6 +436,7 @@ def main(target_input_cdf,
         suspects,thresholds = [],[]
     epochs = cdf_file.varget("Epoch")
     suspect_epochs = epochs[suspects]
+    coverage = get_coverage(epochs)
 
     if len(suspects):
         suspect_datetimes = tt2000_to_date(suspect_epochs)
@@ -407,6 +460,7 @@ def main(target_input_cdf,
     
             suspect = ImpactSuspect(datetime,
                                     sampling_rate,
+                                    coverage,
                                     period,
                                     i,
                                     classification,
