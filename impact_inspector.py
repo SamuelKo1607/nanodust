@@ -138,7 +138,7 @@ class MyGUI:
                     impact,
                     xrange=(-900,1600),
                     colors=["red","blue"],
-                    labels=["filtered","orig"]):
+                    labels=["orig","filtered"]):
         """
         Plot the impact in self.canvas. 
 
