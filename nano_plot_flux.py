@@ -154,7 +154,9 @@ def plot_mamp_suspects(all_suspects,
                        compare_days = None,
                        overplot = None,
                        styles = None,
-                       figures_location = os.path.join("998_generated","figures","")):
+                       ylim = 2000,
+                       figures_location = os.path.join("998_generated",
+                                                       "figures","")):
     """
     A plot of MAMP suspect flux, compared to CNN impacts.
     
@@ -167,7 +169,8 @@ def plot_mamp_suspects(all_suspects,
         Measurement days, class Day from nano_load_days. Default is None, in 
         which case nothing is shown.
 
-    overplot : list of functions: np.array of dt.datetime -> np.array of float, optional
+    overplot : list of functions: np.array of dt.datetime -> 
+               np.array of float, optional
         A list of functons that will be used to overplot over the data. 
         Default is None, in which case nothing is overplotted.
 
@@ -175,6 +178,9 @@ def plot_mamp_suspects(all_suspects,
         list of fmt string, such as "g:2" or something, this assigns 
         a style to the overplot lines. Default is None, in which case "b-" 
         is used.
+
+    ylim : float, optional
+        The upper bound on y-axis. The default is 1500.        
 
     figures_location : str, optional
         Where to put the wrawn figure. Default is "998_generated\\figures\\".
@@ -194,29 +200,64 @@ def plot_mamp_suspects(all_suspects,
     if compare_days != None:
         counts_days = np.zeros(len(unique_YYYYMMDDs),dtype=float)
     counts_suspects = np.zeros(len(unique_YYYYMMDDs),dtype=float)
+    coverage_hours = np.zeros(len(unique_YYYYMMDDs),dtype=float)
     uniqe_dates = np.zeros(len(unique_YYYYMMDDs),dtype=dt.datetime)
     for i, YYYYMMDD in enumerate(unique_YYYYMMDDs):
-        counts_suspects[i] += len([suspect for suspect in all_suspects if suspect.YYYYMMDD == YYYYMMDD])
+        counts_suspects[i] = len([suspect for suspect in all_suspects
+                                  if suspect.YYYYMMDD == YYYYMMDD])
+        coverage_hours[i] = np.mean([suspect.coverage_hours
+                                     for suspect in all_suspects
+                                     if suspect.YYYYMMDD == YYYYMMDD])
         uniqe_dates[i] = YYYYMMDD2date(YYYYMMDD)
         if counts_suspects[i] == 0:
             counts_suspects[i] = np.nan
         if compare_days != None:
             counts_days[i] += sum([day.impact_count * 24 / day.duty_hours
-                                   for day in compare_days if day.YYYYMMDD == YYYYMMDD])
+                                   for day in compare_days
+                                   if day.YYYYMMDD == YYYYMMDD])
             if counts_days[i] == 0:
                 counts_days[i] = np.nan
 
+    counts_suspects_normalized = counts_suspects*24/coverage_hours
 
     fig, ax = plt.subplots()
-    ax.plot(uniqe_dates,counts_suspects,label=r"MAMP suspects >6 $\sigma$")
+
+    #plot MAMP suspects
+    ax.plot(uniqe_dates,counts_suspects_normalized,
+            alpha=.6,color="tab:blue",
+            label=r"MAMP (>12$\sigma$)")
+    #add exrtremes
+    crossings = [[d, c] for d, c in zip(uniqe_dates,counts_suspects_normalized)
+                 if c>ylim]
+    for crossing in crossings:
+        ax.text(crossing[0]-dt.timedelta(weeks=2), ylim*0.5,
+                "{:.0f}".format(crossing[1]),
+                rotation = 90, horizontalalignment='right',
+                fontsize="x-small", color="tab:blue",)
+
+    #compare to CNN data
     if compare_days != None:
-        ax.plot(uniqe_dates,counts_days,label="CNN impacts (/24h equiv.)")
+        ax.plot(uniqe_dates,counts_days,
+                alpha=.6, color="tab:orange",
+                label="CNN (/24h equiv.)")
+        #add exrtremes
+        crossings = [[d, c] for d, c in zip(uniqe_dates,counts_days)
+                     if c>ylim]
+        for crossing in crossings:
+            ax.text(crossing[0]-dt.timedelta(weeks=2), ylim*0.8,
+                    "{:.0f}".format(crossing[1]),
+                    rotation = 90, horizontalalignment='right',
+                    fontsize="x-small", color="tab:orange")
+
+    #overplot models
     if overplot!= None:
         for i, line in enumerate(overplot):
             ax.plot(uniqe_dates,line(uniqe_dates),
-                    styles[i],ms=0,label = "Bayseian model")
+                    styles[i],ms=0,label = "Bayesian fit")
+
+
     ax.legend(fontsize="x-small")
-    ax.set_ylim(0,1500)
+    ax.set_ylim(0,ylim)
     ax.set_ylabel("Impact rate [$day^{-1}$]", fontsize="medium")
     ax.tick_params(axis='x',labelrotation=60)
     fig.tight_layout()
@@ -380,7 +421,8 @@ def plot_asymmetric_flux(days,
         Measurement days, class Day from nano_load_days.
 
     asymmetry : float, optional
-        The threshold of symmetry to consider something asymmetric. The default is 0.2.
+        The threshold of symmetry to consider something asymmetric. 
+        The default is 0.2.
 
     figures_location : str, optional
         Where to put the plots. 
@@ -406,7 +448,8 @@ def plot_asymmetric_flux(days,
     heliocentric_distances = np.zeros(0, dtype=float)
 
     for i, day in enumerate(days):
-        print(f"{i+1}/{len(days)}")
+        if not i%100:
+            print(f"{i+1}/{len(days)}")
         file = glob.glob(impacts_location+"*"+day.YYYYMMDD+"*.pkl")
         if len(file) == 1:
             impacts = load_list(file[0],"")
