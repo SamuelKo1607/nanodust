@@ -208,7 +208,7 @@ def plot_mamp_suspects(all_suspects,
 
 
     fig, ax = plt.subplots()
-    ax.plot(uniqe_dates,counts_suspects,label="MAMP suspects >50mV")
+    ax.plot(uniqe_dates,counts_suspects,label=r"MAMP suspects >6 $\sigma$")
     if compare_days != None:
         ax.plot(uniqe_dates,counts_days,label="CNN impacts (/24h equiv.)")
     if overplot!= None:
