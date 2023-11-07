@@ -425,7 +425,7 @@ def event_filter(wf,time_step):
     # lowpass
     sos = butter(32,7e4,btype="lowpass",fs=(1/(time_step/1e9)),output="sos")
     smooth = sosfilt(sos, smooth)
-    smooth = np.append(smooth[14:],14*[smooth[-1]])
+    smooth = np.append(smooth[11:],11*[smooth[-1]])
 
     corrected = hipass_correction(smooth,time_step/1e9)
     return corrected
@@ -505,10 +505,7 @@ def analyze(smooth_1,
     max1 = np.max(smooth_1)
     max2 = np.max(smooth_2)
     max3 = np.max(smooth_3)
-
-    #smooth_1_detrend = smooth_1-moving_average(smooth_1,499)
-    #smooth_2_detrend = smooth_2-moving_average(smooth_1,499)
-    #smooth_3_detrend = smooth_3-moving_average(smooth_1,499)
+    smooth_sum = smooth_1 + smooth_2 + smooth_3
 
     #amplitude
     amplitude = np.min([max1,max2,max3])
@@ -520,9 +517,7 @@ def analyze(smooth_1,
     extreme_channel = np.argmax([np.max(np.abs(smooth_1)),
                                  np.max(np.abs(smooth_2)),
                                  np.max(np.abs(smooth_3))])
-    extreme_index = np.argmax(np.abs(smooth_1+
-                                     smooth_2+
-                                     smooth_3))
+    extreme_index = np.argmax(np.abs(smooth_sum))
     pol_1 = np.sign(smooth_1[extreme_index])
     pol_2 = np.sign(smooth_2[extreme_index])
     pol_3 = np.sign(smooth_3[extreme_index])
@@ -531,37 +526,60 @@ def analyze(smooth_1,
                        smooth_3[extreme_index]][extreme_channel])
     polarity = pol_max * ( pol_1 == pol_2 == pol_3 )
 
-    #antenna hit
-    smooth_sum = smooth_1 + smooth_2 + smooth_3
-    #smooth_sum_detrend = smooth_1_detrend+smooth_2_detrend+smooth_3_detrend
-    extreme_neg_index = np.argmin(smooth_sum)
-    extreme_pos_index = np.argmax(smooth_sum)
-    extreme_neg = smooth_sum[extreme_neg_index]
-    extreme_pos = smooth_sum[extreme_pos_index]
-    symmetry_neg = ( np.min([np.abs(smooth_1[extreme_neg_index]),
-                             np.abs(smooth_2[extreme_neg_index]),
-                             np.abs(smooth_3[extreme_neg_index])] ) /
-                     np.max([np.abs(smooth_1[extreme_neg_index]),
-                             np.abs(smooth_2[extreme_neg_index]),
-                             np.abs(smooth_3[extreme_neg_index])] ) )
-    if (extreme_neg_index < extreme_pos_index and
-        abs(extreme_neg) > abs(extreme_pos) and
-        symmetry_neg < 0.2 and
-        symmetry < 0.2):
-        antenna_hit = True
-    else:
+    #correlation with a shape - alternative polarity
+    kernel = np.concatenate((-1*np.ones(20),np.zeros(5),np.ones(20)))
+    #kernel = np.concatenate((np.arange(-10,11,1),np.arange(10,-11,-1)))
+    #kernel = np.concatenate((np.arange(-10,11,1)-10,np.arange(10,-11,-1)+10))
+    jumpy = np.correlate(smooth_sum, kernel, mode = "valid")
+    extreme_index = np.argmax(np.abs(jumpy))+len(kernel)//2
+    if extreme_index<= 200 or extreme_index >= len(smooth_1)-200:
+        polarity = 0
         antenna_hit = False
+    else:
+        lowest_neg_index = (np.argmin(smooth_sum[
+                                            extreme_index-200:
+                                            extreme_index+200]
+                                        - np.median(smooth_sum[
+                                                    extreme_index-200:
+                                                    extreme_index+200]))
+                            +extreme_index-200)
+        lowest_neg = smooth_sum[lowest_neg_index]
+        highest_pos_index = (np.argmax(smooth_sum[
+                                            extreme_index-200:
+                                            extreme_index+200]
+                                        - np.median(smooth_sum[
+                                                    extreme_index-200:
+                                                    extreme_index+200]))
+                             + extreme_index-200)
+        highest_pos = smooth_sum[highest_pos_index]
 
-    #correlation with a step shape - alternative polarity
-    step = np.concatenate((-1*np.ones(20),np.zeros(5),np.ones(20)))
-    jumpy = np.correlate(smooth_1+smooth_2+smooth_3,step)
-    extreme_index = np.argmax(np.abs(jumpy))+len(step)-5
-    pol_1 = np.sign(smooth_1[extreme_index])
-    pol_2 = np.sign(smooth_2[extreme_index])
-    pol_3 = np.sign(smooth_3[extreme_index])
-    pol_max = np.sign((smooth_1+smooth_2+smooth_3)[extreme_index])
-    polarity = pol_max * ( pol_1 == pol_2 == pol_3 )
+        if (abs(lowest_neg) > abs(highest_pos)
+                and smooth_1[lowest_neg_index] < 0
+                and smooth_2[lowest_neg_index] < 0
+                and smooth_3[lowest_neg_index] < 0):
+            polarity = -1
+        elif (abs(lowest_neg) < abs(highest_pos)
+                and smooth_1[highest_pos_index] > 0
+                and smooth_2[highest_pos_index] > 0
+                and smooth_3[highest_pos_index] > 0):
+            polarity = 1
+        else:
+            polarity = 0
 
+        #antenna hit
+        symmetry_neg = ( np.min([np.abs(smooth_1[lowest_neg_index]),
+                                 np.abs(smooth_2[lowest_neg_index]),
+                                 np.abs(smooth_3[lowest_neg_index])] ) /
+                         np.max([np.abs(smooth_1[lowest_neg_index]),
+                                 np.abs(smooth_2[lowest_neg_index]),
+                                 np.abs(smooth_3[lowest_neg_index])] ) )
+        if (lowest_neg_index < highest_pos_index and
+            abs(lowest_neg) > abs(highest_pos) and
+            symmetry_neg < 0.2 and
+            symmetry < 0.2):
+            antenna_hit = True
+        else:
+            antenna_hit = False
 
     return amplitude, symmetry, polarity, extreme_index, antenna_hit
 
@@ -711,7 +729,8 @@ def process_cdf(cdf_file):
                 cnn_classification = pd.read_csv(cnn_file_name[0])
                 plain_index = np.arange(events_count)
                 flagged_dust = quality_fact==65535
-                reordered_index = np.append(plain_index[flagged_dust==1],plain_index[flagged_dust==0])
+                reordered_index = np.append(plain_index[flagged_dust==1],
+                                            plain_index[flagged_dust==0])
                 dust = np.array(cnn_classification["Label"])
                 dust = np.array(dust, dtype=bool)
                 indices_analyzed = np.array(cnn_classification["Index"])[dust]-1
@@ -736,12 +755,14 @@ def process_cdf(cdf_file):
                 missing_files += cnn_files_pattern
             indices_analyzed = np.zeros(0,dtype=int)
             for cnn_file in cnn_files:
-                indices_analyzed = np.append(indices_analyzed, int(cnn_file[-7:-4]))
+                indices_analyzed = np.append(indices_analyzed,
+                                             int(cnn_file[-7:-4]))
             indices_analyzed -= 1 #because matlab
 
             plain_index = np.arange(events_count)
             flagged_dust = quality_fact==65535
-            reordered_index = np.append(plain_index[flagged_dust==1],plain_index[flagged_dust==0])
+            reordered_index = np.append(plain_index[flagged_dust==1],
+                                        plain_index[flagged_dust==0])
             try:
                 indices = reordered_index[indices_analyzed]
             except:
