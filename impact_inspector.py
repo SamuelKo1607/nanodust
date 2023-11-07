@@ -292,6 +292,7 @@ def construct_subplots(dpi=100):
     ax : matplotblib.Figure.Axes
         Empty axes.
     """
+    plt.close()
     fig = plt.figure(figsize=(12,5),dpi=dpi)
     gs = fig.add_gridspec(3,2,width_ratios=[1, 2],hspace=0.1,wspace=0.1)
     ax = gs.subplots()
