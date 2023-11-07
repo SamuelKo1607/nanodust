@@ -34,8 +34,10 @@ class Impact:
                  datetime,
                  sampling_rate,
                  amplitude,
+                 amplitude_neg,
                  extreme_index,
                  symmetry,
+                 symmetry_neg,
                  polarity,
                  antenna_hit,
                  wf_orig,
@@ -46,8 +48,10 @@ class Impact:
         self.YYYYMMDD = datetime.strftime('%Y%m%d')
         self.sampling_rate = sampling_rate
         self.amplitude = amplitude
+        self.amplitude_neg = amplitude_neg
         self.extreme_index = extreme_index
         self.symmetry = symmetry
+        self.symmetry_neg = symmetry_neg
         self.polarity = polarity
         self.antenna_hit = antenna_hit
         self.wf_orig = wf_orig
@@ -502,16 +506,7 @@ def analyze(smooth_1,
 
     """
 
-    max1 = np.max(smooth_1)
-    max2 = np.max(smooth_2)
-    max3 = np.max(smooth_3)
     smooth_sum = smooth_1 + smooth_2 + smooth_3
-
-    #amplitude
-    amplitude = np.min([max1,max2,max3])
-
-    #symmetry
-    symmetry = amplitude / np.max([max1,max2,max3])
 
     #polarity
     extreme_channel = np.argmax([np.max(np.abs(smooth_1)),
@@ -532,9 +527,14 @@ def analyze(smooth_1,
     #kernel = np.concatenate((np.arange(-10,11,1)-10,np.arange(10,-11,-1)+10))
     jumpy = np.correlate(smooth_sum, kernel, mode = "valid")
     extreme_index = np.argmax(np.abs(jumpy))+len(kernel)//2
-    if extreme_index<= 200 or extreme_index >= len(smooth_1)-200:
+    if extreme_index <= 200 or extreme_index >= len(smooth_1)-200:
         polarity = 0
         antenna_hit = False
+        amplitude = 0
+        amplitude_neg = 0
+        symmetry = 1
+        symmetry_neg = 1
+
     else:
         lowest_neg_index = (np.argmin(smooth_sum[
                                             extreme_index-200:
@@ -566,13 +566,24 @@ def analyze(smooth_1,
         else:
             polarity = 0
 
-        #antenna hit
-        symmetry_neg = ( np.min([np.abs(smooth_1[lowest_neg_index]),
+        #amplitude
+        amplitude = np.min([smooth_1[highest_pos_index],
+                            smooth_2[highest_pos_index],
+                            smooth_3[highest_pos_index]])
+        #symmetry
+        symmetry = amplitude / np.max([smooth_1[highest_pos_index],
+                                       smooth_2[highest_pos_index],
+                                       smooth_3[highest_pos_index]])
+        #amplitude_neg
+        amplitude_neg = np.min([np.abs(smooth_1[lowest_neg_index]),
                                  np.abs(smooth_2[lowest_neg_index]),
-                                 np.abs(smooth_3[lowest_neg_index])] ) /
+                                 np.abs(smooth_3[lowest_neg_index])] )
+        #symmetry_neg
+        symmetry_neg = ( amplitude_neg /
                          np.max([np.abs(smooth_1[lowest_neg_index]),
                                  np.abs(smooth_2[lowest_neg_index]),
                                  np.abs(smooth_3[lowest_neg_index])] ) )
+        #antenna hit
         if (lowest_neg_index < highest_pos_index and
             abs(lowest_neg) > abs(highest_pos) and
             symmetry_neg < 0.2 and
@@ -581,7 +592,13 @@ def analyze(smooth_1,
         else:
             antenna_hit = False
 
-    return amplitude, symmetry, polarity, extreme_index, antenna_hit
+    return (amplitude,
+            amplitude_neg,
+            symmetry,
+            symmetry_neg,
+            polarity,
+            extreme_index,
+            antenna_hit)
 
 
 def process_impact(cdf_file, i):
@@ -619,15 +636,23 @@ def process_impact(cdf_file, i):
     smooth_3 = event_filter(monopole_3, time_step)
     smooths = [smooth_1, smooth_2, smooth_3]
 
-    amplitude, symmetry, polarity, extreme_index, antenna_hit = analyze(smooth_1,
-                                                                        smooth_2,
-                                                                        smooth_3)
+    (amplitude,
+     amplitude_neg,
+     symmetry,
+     symmetry_neg,
+     polarity,
+     extreme_index,
+     antenna_hit) = analyze(smooth_1,
+                            smooth_2,
+                            smooth_3)
 
     impact = Impact(date_time,
                     sampling_rate,
                     amplitude,
+                    amplitude_neg,
                     extreme_index,
                     symmetry,
+                    symmetry_neg,
                     polarity,
                     antenna_hit,
                     monopoles,
