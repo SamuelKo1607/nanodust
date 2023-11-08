@@ -101,7 +101,14 @@ test.mu.model = function(cmd = c("graph", "Q", "mu", "initial", "log.norm.const"
 ###################################
 
 mydata = read.csv(file = 'data_synced\\flux_readable.csv')
-names(mydata)[c(2,3,4,5,6)] = c("flux","vr","vt","r","exposure")
+names(mydata)[c(2,3,4,5,6,9,10,11)] = c("flux",
+                                        "vr",
+                                        "vt",
+                                        "r",
+                                        "exposure",
+                                        "vx",
+                                        "vy",
+                                        "vz")
 n = length(mydata$vr)
 mydata$idx = 1:n 
 
