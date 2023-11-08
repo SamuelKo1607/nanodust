@@ -42,14 +42,24 @@ def make_flux_to_fit_inla(days,
                          "Radial velocity [km/s]",
                          "Tangential velocity [km/s]",
                          "Radial distance [au]",
-                         "Detection time [hours]"])
+                         "Detection time [hours]",
+                         "Velocity phase angle [deg]",
+                         "Velocity inclination [deg]",
+                         "V_X (HAE) [km/s]",
+                         "V_Y (HAE) [km/s]",
+                         "V_Z (HAE) [km/s]"])
         for day in days:
             writer.writerow([str(date2jd(day.date)),
                              str(day.impact_count),
                              str(day.heliocentric_radial_speed),
                              str(day.heliocentric_tangential_speed),
                              str(day.heliocentric_distance),
-                             str(day.duty_hours)])
+                             str(day.duty_hours),
+                             str(day.velocity_phase),
+                             str(day.velocity_inclination),
+                             str(day.velocity_HAE_x),
+                             str(day.velocity_HAE_y),
+                             str(day.velocity_HAE_z)])
 
 
 
@@ -79,8 +89,7 @@ def aggregate_flux_readable(location = os.path.join("998_generated","days",""),
     """
     if force:
         print("saving readable file forcedly")
-        make_flux_to_fit_inla(load_all_days(name = "flux_readable.csv",
-                                            location = location),
+        make_flux_to_fit_inla(load_all_days(days_location = location),
                               location = target_location)
     else:
         try:
@@ -89,9 +98,8 @@ def aggregate_flux_readable(location = os.path.join("998_generated","days",""),
                 print(f)
         except:
             print("saving readable file")
-            make_flux_to_fit_inla(load_all_days(name = "flux_readable.csv",
-                                                location = location),
-                                  location = target_location)
+        make_flux_to_fit_inla(load_all_days(days_location = location),
+                              location = target_location)
 
 
 def aggregate_mamp_suspects(location = os.path.join("998_generated","mamp_processed",""),
@@ -133,7 +141,7 @@ def aggregate_mamp_suspects(location = os.path.join("998_generated","mamp_proces
             save_list(all_suspects, "all_suspects.pkl", target_location)
 
 
-
+#%%
 
 if __name__ == "__main__":
     aggregate_flux_readable()
