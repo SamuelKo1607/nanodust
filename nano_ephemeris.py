@@ -33,6 +33,14 @@ def load_ephemeris(ephemeris_file):
         Radial velocity in km/s for every ephemeris table record.
     tangential_v : numpy.ndarray(1,:) of float
         Tangential velocity in km/s for every ephemeris table record.
+    hae_theta : numpy.ndarray(1,:) of float
+        Inclination angle of the position for every ephemeris table record. 
+        Measred from the North pole, hence ecpliptics being 90 deg.
+    v_phi : numpy.ndarray(1,:) of float
+        Phase angle of the velocity for every ephemeris table record.
+    v_theta : numpy.ndarray(1,:) of float
+        Inclination angle of the velocity for every ephemeris table record. 
+        Measured from the ecliptics, with negative meaning North.
     """
 
     time = np.zeros(0)
@@ -48,9 +56,12 @@ def load_ephemeris(ephemeris_file):
                 hae_v = np.append(hae_v,[float(row[5]),float(row[6]),float(row[7])])
             hae_r = np.reshape(hae_r,((len(hae_r)//3,3)))
             hae_v = np.reshape(hae_v,((len(hae_v)//3,3)))
-            r = (hae_r[:,0]**2+hae_r[:,1]**2+hae_r[:,2]**2)**0.5
+            r = (hae_r[:,0]**2 + hae_r[:,1]**2 + hae_r[:,2]**2)**0.5
+            v = (hae_v[:,0]**2 + hae_v[:,1]**2 + hae_v[:,2]**2)**0.5
             hae_phi = np.degrees(np.arctan2(hae_r[:,1],hae_r[:,0]))
             hae_theta = np.degrees(np.arccos((hae_r[:,2]/r[:])))
+            v_phi = np.degrees(np.arctan2(hae_v[:,1],hae_v[:,0]))
+            v_theta = np.degrees(np.arccos((hae_v[:,2]/v[:])))-90
 
     except:
         raise LookupError("Unable to load file "+ephemeris_file)
@@ -63,7 +74,15 @@ def load_ephemeris(ephemeris_file):
             unit_radial = hae_r[i,:]/np.linalg.norm(hae_r[i,:])
             radial_v[i] = np.inner(unit_radial,hae_v[i,:])
             tangential_v[i] = np.linalg.norm(hae_v[i,:]-radial_v[i]*unit_radial)     
-        return time, hae_r, hae_v, hae_phi, radial_v, tangential_v, hae_theta
+        return (time,
+                hae_r,
+                hae_v,
+                hae_phi,
+                radial_v,
+                tangential_v,
+                hae_theta,
+                v_phi,
+                v_theta)
 
 
 def load_hae(ephemeris_file):
@@ -84,11 +103,23 @@ def load_hae(ephemeris_file):
         HAE positions in AU.
 
     """
-    jd, hae, hae_v, hae_phi, radial_v, tangential_v, hae_theta = load_ephemeris(ephemeris_file)
+    (jd,
+     hae,
+     hae_v,
+     hae_phi,
+     radial_v,
+     tangential_v,
+     hae_theta,
+     v_phi,
+     v_theta) = load_ephemeris(ephemeris_file)
+
     return jd, hae/au
 
 
-def fetch_heliocentric_solo(file,location = os.path.join("998_generated","assets","")):
+def fetch_heliocentric_solo(file,
+                            location = os.path.join("998_generated",
+                                                    "assets",
+                                                    "")):
     """
     This function returns helicoentric distance & phase, in addition to 
     radial and tangential velocities in a form of 1D functions. Be careful, 
@@ -119,14 +150,36 @@ def fetch_heliocentric_solo(file,location = os.path.join("998_generated","assets
             f_rad_v = pickle.load(f)
         with open(location+"f_tan_v.pkl", "rb") as f:
             f_tan_v = pickle.load(f)
+        with open(location+"f_v_phi.pkl", "rb") as f:
+            f_v_phi = pickle.load(f)
+        with open(location+"f_v_theta.pkl", "rb") as f:
+            f_v_theta = pickle.load(f)
     except:
         print("assets missing, loading "+file)
-        jd_ephem, hae_r, hae_v, hae_phi, radial_v, tangential_v, hae_theta = load_ephemeris(file)
-        heliocentric_distance = np.sqrt(hae_r[:,0]**2+hae_r[:,1]**2+hae_r[:,2]**2)/au #in au
-        f_hel_r = interpolate.interp1d(jd_ephem,heliocentric_distance,fill_value="extrapolate",kind=3)
-        f_hel_phi = interpolate.interp1d(jd_ephem,hae_phi,fill_value="extrapolate",kind=3)
-        f_rad_v = interpolate.interp1d(jd_ephem,radial_v,fill_value="extrapolate",kind=3)
-        f_tan_v = interpolate.interp1d(jd_ephem,tangential_v,fill_value="extrapolate",kind=3)
+        (jd_ephem,
+         hae_r,
+         hae_v,
+         hae_phi,
+         radial_v,
+         tangential_v,
+         hae_theta,
+         v_phi,
+         v_theta) = load_ephemeris(file)
+        heliocentric_distance = np.sqrt(  hae_r[:,0]**2
+                                        + hae_r[:,1]**2
+                                        + hae_r[:,2]**2 )/au #in au
+        f_hel_r = interpolate.interp1d(jd_ephem,heliocentric_distance,
+                                       fill_value="extrapolate",kind=3)
+        f_hel_phi = interpolate.interp1d(jd_ephem,hae_phi,
+                                         fill_value="extrapolate",kind=3)
+        f_rad_v = interpolate.interp1d(jd_ephem,radial_v,
+                                       fill_value="extrapolate",kind=3)
+        f_tan_v = interpolate.interp1d(jd_ephem,tangential_v,
+                                       fill_value="extrapolate",kind=3)
+        f_v_phi = interpolate.interp1d(jd_ephem,v_phi,
+                                       fill_value="extrapolate",kind=3)
+        f_v_theta = interpolate.interp1d(jd_ephem,v_theta,
+                                         fill_value="extrapolate",kind=3)
 
         print("constructing assets")
         os.makedirs(location, exist_ok=True)
@@ -138,10 +191,14 @@ def fetch_heliocentric_solo(file,location = os.path.join("998_generated","assets
             pickle.dump(f_rad_v, f)
         with open(location+"f_tan_v.pkl", "wb") as f:
             pickle.dump(f_tan_v, f)
+        with open(location+"f_v_phi.pkl", "wb") as f:
+            pickle.dump(f_v_phi, f)
+        with open(location+"f_v_theta.pkl", "wb") as f:
+            pickle.dump(f_v_theta, f)
     else:
         pass
     finally:
-        return f_hel_r, f_hel_phi, f_rad_v, f_tan_v
+        return f_hel_r, f_hel_phi, f_rad_v, f_tan_v, f_v_phi, f_v_theta
 
 
 
