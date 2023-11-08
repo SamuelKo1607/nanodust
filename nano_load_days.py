@@ -82,7 +82,9 @@ class Day:
                  sampling_rate,
                  heliocentric_distance,
                  spacecraft_speed,
-                 heliocentric_radial_speed):
+                 heliocentric_radial_speed,
+                 velocity_phase,
+                 velocity_inclination):
         self.date = date
         self.YYYYMMDD = date.strftime('%Y%m%d')
         self.impact_count = len(impact_times)
@@ -93,9 +95,19 @@ class Day:
         self.heliocentric_distance = heliocentric_distance
         self.spacecraft_speed = spacecraft_speed
         self.heliocentric_radial_speed = heliocentric_radial_speed
-        self.heliocentric_tangential_speed = (spacecraft_speed**2-
-                                              heliocentric_radial_speed**2
-                                              )**0.5
+        self.heliocentric_tangential_speed = ( spacecraft_speed**2
+                                               - heliocentric_radial_speed**2
+                                             )**0.5
+        self.velocity_phase = velocity_phase
+        self.velocity_inclination = velocity_inclination
+        self.velocity_HAE_x = ( spacecraft_speed
+                                * np.sin(np.deg2rad(90-velocity_inclination))
+                                * np.cos(np.deg2rad(velocity_phase)) )
+        self.velocity_HAE_y = ( spacecraft_speed
+                                * np.sin(np.deg2rad(90-velocity_inclination))
+                                * np.sin(np.deg2rad(velocity_phase)) )
+        self.velocity_HAE_z = ( spacecraft_speed
+                                * np.cos(np.deg2rad(90-velocity_inclination)) )
         self.produced = dt.datetime.now()
 
 
@@ -541,7 +553,7 @@ def analyze(smooth_1,
                                             extreme_index+200]
                                         - np.median(smooth_sum[
                                                     extreme_index-200:
-                                                    extreme_index+200]))
+                                                    extreme_index]))
                             +extreme_index-200)
         lowest_neg = smooth_sum[lowest_neg_index]
         highest_pos_index = (np.argmax(smooth_sum[
@@ -549,7 +561,7 @@ def analyze(smooth_1,
                                             extreme_index+200]
                                         - np.median(smooth_sum[
                                                     extreme_index-200:
-                                                    extreme_index+200]))
+                                                    extreme_index]))
                              + extreme_index-200)
         highest_pos = smooth_sum[highest_pos_index]
 
@@ -682,17 +694,30 @@ def get_solo_state(YYYYMMDD, ephem_file):
         total speed in km/s.
     v_rad : float
         radial speed in km/s.
+    v_phi : float
+        The velocity angle in XY plane in degrees, measured from the first
+        point of Airies (HAE).
+    v_theta : float
+        The velocity angle inclination from the XY plane 
+        in degrees as in (HAE).
 
     """
-    f_hel_r, f_hel_phi, f_rad_v, f_tan_v = fetch_heliocentric_solo(
-                                                solo_ephemeris_file)
+    (f_hel_r,
+     f_hel_phi,
+     f_rad_v,
+     f_tan_v,
+     f_v_phi,
+     f_v_theta) = fetch_heliocentric_solo(solo_ephemeris_file)
+
     jd = YYYYMMDD2jd(YYYYMMDD)
     r = float(f_hel_r(jd))
     v_rad = float(f_rad_v(jd))
     v_tan = float(f_tan_v(jd))
     v = float(np.sqrt(v_rad**2+v_tan**2))
+    v_phi = float(f_v_phi(jd))
+    v_theta = float(f_v_theta(jd))
 
-    return r, v, v_rad
+    return r, v, v_rad, v_phi, v_theta
 
 
 def process_cdf(cdf_file):
@@ -827,7 +852,8 @@ def process_cdf(cdf_file):
         impact_times=[i.datetime for i in impacts]
         non_impact_times = list(set(all_suspect_times) - set(impact_times))
         duty_hours = get_duty_hours(YYYYMMDD, cdf_stat_location)
-        r, v, v_rad = get_solo_state(YYYYMMDD, solo_ephemeris_file)
+        r, v, v_rad, v_phi, v_theta = get_solo_state(YYYYMMDD,
+                                                     solo_ephemeris_file)
 
     except Exception as err:
         print("day construction failed @ "+YYYYMMDD)
@@ -841,7 +867,9 @@ def process_cdf(cdf_file):
                   sampling_rate[0],
                   r,
                   v,
-                  v_rad)
+                  v_rad,
+                  v_phi,
+                  v_theta)
 
     return day, impacts, missing_files
 
