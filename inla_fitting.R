@@ -1,13 +1,16 @@
 remove(list=ls())
 #setwd(dir = "C:\\Users\\skoci\\Documents\\nanodust")
 #install.packages("INLA",repos=c(getOption("repos"),INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
+#install.packages("distr")
 
 library(INLA)
 library(hexbin)
 require(hexbin)
 require(lattice)
+library(distr)
 #require(RColorBrewer)
 #library(vioplot)
+
 
 
 
@@ -17,12 +20,38 @@ require(lattice)
 ###################################
 
 
-three_component_model = function(cmd = c("graph", "Q", "mu", "initial", "log.norm.const",
-                                 "log.prior", "quit"), theta=NULLL){
+three_component_model <- function(cmd = c("graph", "Q", "mu", "initial", 
+                                          "log.norm.const", "log.prior", "quit",
+                                          "rate", 
+                                          "prior.l_bg",
+                                          "prior.l_isd",
+                                          "prior.l_b",
+                                          "prior.v_b_r",
+                                          "prior.e_v",
+                                          "prior.e_r"), 
+                                  theta=NULL, feed_x=NULL){
 
-  envir <-parent.env(environment())
+  envir <- parent.env(environment())
   prec.high = exp(15)
   
+  prior.l_bg <- function(l_bg=feed_x){
+    return(dgamma(l_bg,  shape = 2,    scale = 1e-6, log=TRUE))
+  }
+  prior.l_isd <- function(l_isd=feed_x){
+    return(dgamma(l_isd, shape = 2,    scale = 1e-5, log=TRUE))
+  }
+  prior.l_b <- function(l_b=feed_x){
+    return(dgamma(l_b,   shape = 2,    scale = 1e-4, log=TRUE))
+  }
+  prior.v_b_r <- function(v_b_r=feed_x){
+    return(dnorm(v_b_r,  mean  = 60,    sd   = 5,    log=TRUE))
+  }
+  prior.e_v <- function(e_v=feed_x){
+    return(dnorm(e_v,    mean  = 2.2,   sd   = 0.05, log=TRUE))
+  }
+  prior.e_r <- function(e_r=feed_x){
+    return(dnorm(e_r,    mean  = -1.65, sd   = 0.05, log=TRUE))
+  }
   
   rate <- function(v_sc_r, v_sc_t, r_sc, v_sc_x, v_sc_y, v_sc_z,  #covariates
                    l_bg, l_isd, l_b, v_b_r, e_v, e_r,      #hyperparameters
@@ -65,7 +94,8 @@ three_component_model = function(cmd = c("graph", "Q", "mu", "initial", "log.nor
     hourly_rate = 3600 * S * ( L_bg + L_isd + L_b )
     return(hourly_rate)
   }
-
+  
+  
   
   interpret.theta <- function(){
     return(list(l_bg  = exp(theta[1L]), 
@@ -107,12 +137,12 @@ three_component_model = function(cmd = c("graph", "Q", "mu", "initial", "log.nor
     par = interpret.theta()
     
     #nice priors
-    val <- (dgamma(par$l_bg,  shape = 2,    scale = 1e-6, log=TRUE) + theta[1L]+
-            dgamma(par$l_isd, shape = 2,    scale = 1e-5, log=TRUE) + theta[2L]+
-            dgamma(par$l_b,   shape = 2,    scale = 1e-4, log=TRUE) + theta[3L]+
-            dnorm(par$v_b_r,  mean  = 60,    sd   = 5,     log=TRUE) +
-            dnorm(par$e_v,    mean  = 2.2,   sd   = 0.05,  log=TRUE) +
-            dnorm(par$e_r,    mean  = -1.65, sd   = 0.05,  log=TRUE) 
+    val <- (prior.l_bg( par$l_bg)    + theta[1L] +
+            prior.l_isd(par$l_isd)   + theta[2L] +
+            prior.l_b(  par$l_b)     + theta[3L] +
+            prior.v_b_r(par$v_b_r)   +
+            prior.e_v(  par$e_v)     + 
+            prior.e_r(  par$e_r)
            )
   
     return(val)
@@ -216,9 +246,30 @@ plot((result$marginals.hyperpar$`Theta6 for idx`[1:43]),result$marginals.hyperpa
 
 
 ###################################
-###### Sample the posterior  ######
+### Sample prior and posterior  ###
 ###################################
 
+
+#priors extracted
+
+prior.l_bg  <- function(x){ 
+  return(exp(three_component_model(cmd="prior.l_bg", feed_x=x))) }
+prior.l_isd <- function(x){
+  return(exp(three_component_model(cmd="prior.l_isd",feed_x=x))) }
+prior.l_b   <- function(x){
+  return(exp(three_component_model(cmd="prior.l_b",  feed_x=x))) }
+prior.v_b_r <- function(x){
+  return(exp(three_component_model(cmd="prior.v_b_r",feed_x=x))) }
+prior.e_v   <- function(x){
+  return(exp(three_component_model(cmd="prior.e_v",  feed_x=x))) }
+prior.e_r   <- function(x){
+  return(exp(three_component_model(cmd="prior.e_r",  feed_x=x))) }
+
+
+x <- seq(1e-8,1e-1, 1e-8)
+
+
+#posteriors
 
 s = inla.hyperpar.sample(1000000, result)
 
