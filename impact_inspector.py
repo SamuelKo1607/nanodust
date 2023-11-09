@@ -1,4 +1,5 @@
 import tkinter as tk
+import matplotlib as mpl
 from matplotlib.backend_bases import key_press_handler
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2Tk)
@@ -13,6 +14,9 @@ from nano_load_days import Day
 from nano_load_days import load_all_days
 from nano_load_days import load_list
 
+import figure_standards as figstd
+axes_size = figstd.set_rcparams_dynamo(mpl.rcParams, num_cols=1, ls='thin')
+mpl.rcParams['figure.dpi']= 200
 
 class MyGUI:
 
