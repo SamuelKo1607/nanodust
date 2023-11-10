@@ -66,7 +66,8 @@ def fill_nan(A):
 def plot_flux(days,
               figures_location = os.path.join("998_generated","figures",""),
               overplot = None,
-              styles = None):
+              styles = None,
+              aspect = 1.2666):
     """
     A plot of daily flux is made with the data from the provided days files.
 
@@ -108,7 +109,7 @@ def plot_flux(days,
         else:
             colorcodes = np.append(colorcodes,"teal")
 
-    fig, ax = plt.subplots(figsize=(3.8, 3))
+    fig, ax = plt.subplots(figsize=(3*aspect, 3))
     ax.set_ylabel("Impact rate (duty-cycle corrected) [$day^{-1}$]"
                   , fontsize="medium")
     ax.set_title('CNN Dust Impacts: '+str(np.round(sum(counts)))
@@ -518,6 +519,9 @@ if __name__ == "__main__":
     mean, bottom5, top5 = build_bayesian_fit(load_list("bayesian_fit_orig.pkl",
                                                        os.path.join("data_synced","")
                                                        ))
+
+    plot_flux(load_all_days(),
+              aspect = 2)
 
     plot_flux(load_all_days(),
               overplot=[bottom5, mean, top5],
