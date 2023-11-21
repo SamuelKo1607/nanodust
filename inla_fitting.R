@@ -223,6 +223,12 @@ save(pit, file = "998_generated\\inla\\pit.RData")
   
 plot(mydata$flux/mydata$exposure, ylab="counts/E")
 lines(result$summary.fitted.values$mean, col=2, lwd=3)
+lines(30+mydata$flux/mydata$exposure-result$summary.fitted.values$mean, col="blue")
+
+hist(mydata$flux/mydata$exposure-result$summary.fitted.values$mean,
+     breaks=c(-40:40),
+     main="residuals histogram")
+mtext(paste("stdev = ",as.character(sqrt(var(mydata$flux/mydata$exposure-result$summary.fitted.values$mean)))), side=3)
   
 # Posterior means of the hyperparameters
 inla.emarginal(function(x) exp(x), result$marginals.hyperpar$`Theta1 for idx`)
