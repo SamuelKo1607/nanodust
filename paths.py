@@ -14,6 +14,7 @@ hi_f_cat_location = os.path.join("data_synced","Amplitude_data","nanodust_classi
 solo_ephemeris_file = os.path.join("data_synced","solo_fine_ephemeris_noheader.txt")
 #venus_ephemeris_file = os.path.join("..","data","ephemerides","venus_fine_ephemeris_noheader.txt")
 venus_ephemeris_file = os.path.join("data_synced","venus_fine_ephemeris_noheader.txt")
+inla_results = os.path.join("998_generated","inla","")
 
 if __name__ == "__main__":
     print("data paths in your system:")
