@@ -32,10 +32,10 @@ three_component_model <- function(cmd = c("graph", "Q", "mu", "initial",
   prec.high = exp(15)
   
   prior.l_bg <- function(l_bg=feed_x){
-    return(dgamma(l_bg,  shape = 2,    scale = 1e-5, log=TRUE))
+    return(dgamma(l_bg,  shape = 2,    scale = 1e-4, log=TRUE))
   }
   prior.l_isd <- function(l_isd=feed_x){
-    return(dgamma(l_isd, shape = 2,    scale = 1e-5, log=TRUE))
+    return(dgamma(l_isd, shape = 2,    scale = 1e-4, log=TRUE))
   }
   prior.l_b <- function(l_b=feed_x){
     return(dgamma(l_b,   shape = 2,    scale = 1e-4, log=TRUE))
@@ -211,6 +211,7 @@ pit = result$cpo$pit
 #save(pit, file = "998_generated\\inla\\pit.RData")
 
 #plotting
+par(mfrow = c(1, 1))
 plot(mydata$flux/mydata$exposure, ylab="counts/E")
 lines(result$summary.fitted.values$mean, col=2, lwd=3)
 lines(30+mydata$flux/mydata$exposure-result$summary.fitted.values$mean, col="blue")
@@ -219,7 +220,10 @@ span = round(max(abs(mydata$flux/mydata$exposure-result$summary.fitted.values$me
 hist(mydata$flux/mydata$exposure-result$summary.fitted.values$mean,
      breaks=c(-span:span),
      main="")
-mtext(paste("residuals histogram, stdev = ",as.character(sqrt(var(mydata$flux/mydata$exposure-result$summary.fitted.values$mean)))), side=3)
+mtext(paste("residuals histogram, stdev = ",
+            as.character(sqrt(var(mydata$flux/mydata$exposure-result$summary.fitted.values$mean))),
+            ", log(mlik) = ",
+            result$mlik[1]), side=3)
   
 # Posterior means of the hyperparameters
 inla.emarginal(function(x) exp(x), result$marginals.hyperpar$`Theta1 for idx`)
