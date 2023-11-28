@@ -1,13 +1,15 @@
 remove(list=ls())
 setwd(dir = "C:\\Users\\skoci\\Documents\\nanodust")
-#install.packages("INLA",repos=c(getOption("repos"),INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
-#install.packages("distr")
+# install.packages("INLA",repos=c(getOption("repos"),INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
+# install.packages("distr")
+# install.packages('dplyr')
 
 library(INLA)
 library(hexbin)
 require(hexbin)
 require(lattice)
 library(distr)
+library(dplyr)
 #require(RColorBrewer)
 #library(vioplot)
 
@@ -32,10 +34,10 @@ three_component_model <- function(cmd = c("graph", "Q", "mu", "initial",
   prec.high = exp(15)
   
   prior.l_bg <- function(l_bg=feed_x){
-    return(dgamma(l_bg,  shape = 2,    scale = 1e-4, log=TRUE))
+    return(dgamma(l_bg,  shape = 2,    scale = 1e-5, log=TRUE))
   }
   prior.l_isd <- function(l_isd=feed_x){
-    return(dgamma(l_isd, shape = 2,    scale = 1e-4, log=TRUE))
+    return(dgamma(l_isd, shape = 2,    scale = 1e-5, log=TRUE))
   }
   prior.l_b <- function(l_b=feed_x){
     return(dgamma(l_b,   shape = 2,    scale = 1e-4, log=TRUE))
@@ -181,8 +183,14 @@ names(mydata)[c(2,3,4,5,6,9,10,11)] = c("flux",
                                         "vx",
                                         "vy",
                                         "vz")
+
+# for inner only fit
+# mydata = filter(mydata, r <= 0.7)
+
 n = length(mydata$vr)
 mydata$idx = 1:n 
+
+
 
 
 
