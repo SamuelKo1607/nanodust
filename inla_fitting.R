@@ -185,7 +185,7 @@ names(mydata)[c(2,3,4,5,6,9,10,11)] = c("flux",
                                         "vz")
 
 # for inner only fit
-# mydata = filter(mydata, r <= 0.7)
+# mydata = filter(mydata, r <= 0.8)
 
 n = length(mydata$vr)
 mydata$idx = 1:n 
