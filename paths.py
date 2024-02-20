@@ -3,6 +3,7 @@ import shutil
 
 cdf_stat_location = os.path.join("..","data","solo","rpw","tds_stat","")
 cdf_tswf_e_location = os.path.join("..","data","solo","rpw","tds_wf_e","")
+unpacked_waveforms = os.path.join("998_generated","unpacked_waveforms","")
 cdf_mamp_location = os.path.join("..","data","solo","rpw","mamp","")
 #lo_f_cat_location = os.path.join("..","data","solo","rpw","Amplitude_data","Index-Label-MaxAmplitude","")
 #lo_f_cat_new_location = os.path.join("..","data","solo","rpw","Amplitude_data","low_frequency_new","Label-MaxAmplitude","")
