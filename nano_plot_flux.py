@@ -67,7 +67,9 @@ def plot_flux(days,
               figures_location = os.path.join("998_generated","figures",""),
               overplot = None,
               styles = None,
-              aspect = 1.2666):
+              aspect = 1.2666,
+              zoom = 1,
+              pres = False):
     """
     A plot of daily flux is made with the data from the provided days files.
 
@@ -75,18 +77,22 @@ def plot_flux(days,
     ----------
     days : list of Day object
         Measurement days, class Day from nano_load_days.
-
     figures_location : str, optional
         Where to put the wrawn figure. Default is "figures_location".
-
     overplot : list of functions: np.array of dt.datetime -> np.array of float, optional
         A list of functons that will be used to overplot over the data. 
         Default is None, in which case nothing is overplotted.
-
     styles : list of str, optional
         list of fmt string, such as "g:2" or something, this assigns 
         a style to the overplot lines. Default is None, in which case "b-" 
         is used.
+    aspect : float, optional
+        The aspect ratio of the plot. The default is 1.2666 = 19/15.
+    zoom : float, optional
+        Size of the labels. The default is 1, in which 
+        case 3x3 figsize is used.
+    pres : bool, optional
+        Whether to use the simplified plot, inteded for ppt inclusion.
 
     Returns
     -------
@@ -104,19 +110,36 @@ def plot_flux(days,
 
     colorcodes = np.zeros(0,dtype=str)
     for sampling_rate in sampling_rates:
-        if sampling_rate < 263000:
-            colorcodes = np.append(colorcodes,"firebrick")
+        if not pres:
+            if sampling_rate < 263000:
+                colorcodes = np.append(colorcodes,"firebrick")
+            else:
+                colorcodes = np.append(colorcodes,"teal")
         else:
-            colorcodes = np.append(colorcodes,"teal")
+            colorcodes = np.append(colorcodes,"red")
 
-    fig, ax = plt.subplots(figsize=(3*aspect, 3))
-    ax.set_ylabel("Impact rate (duty-cycle corrected) [$day^{-1}$]"
+    fig, ax = plt.subplots(figsize=(3*aspect/zoom, 3/zoom))
+    if pres:
+        ax.set_ylabel("Impact rate (corrected) [/day]")
+        ax.tick_params(axis='y',labelleft=True,labelright=False)
+        ax.tick_params(axis='y',which="major",left=True,right=True)
+        ax.tick_params(axis='y',which="minor",left=True,right=True)
+        ax.tick_params(labelleft=True,
+                       labelright=False,
+                       labelbottom = True,
+                       labeltop = False)
+    else:
+        ax.set_ylabel("Impact rate (duty-cycle corrected) [$day^{-1}$]"
                   , fontsize="medium")
-    ax.set_title('CNN Dust Impacts: '+str(np.round(sum(counts)))
+        ax.set_title('CNN Dust Impacts: '+str(np.round(sum(counts)))
                  , fontsize="medium", fontweight="bold")
+        ax.tick_params(axis='y',labelleft=True,labelright=False)
+        ax.tick_params(axis='y',which="minor",left=True,right=False)
+        ax.tick_params(labelleft=True,
+                       labelright=True,
+                       labelbottom = True,
+                       labeltop = False)
     ax.tick_params(axis='x',labeltop=False,labelbottom=True)
-    ax.tick_params(axis='y',labelleft=True,labelright=False)
-    ax.tick_params(axis='y',which="minor",left=True,right=False)
     if overplot!= None:
         for i, line in enumerate(overplot):
             ax.plot(dates,line(dates),styles[i],lw=1,ms=0)
@@ -130,22 +153,21 @@ def plot_flux(days,
     ax.xaxis.set_minor_locator(mdates.MonthLocator())
     ax.set_xlim(left = min(dates), right = max(dates))
     ax.tick_params(axis='x',which="minor",bottom=True,top=True)
-    ax.tick_params(axis='x',labelrotation=60)
+    xlabels = ax.get_xticklabels()
+    ax.set_xticklabels(xlabels, rotation=60,
+                      ha="right", rotation_mode='anchor')
     ax.tick_params(labelsize="medium")
     ax.set_ylim(0,1400)
-    ax.tick_params(labelleft=True,
-                   labelright=True,
-                   labelbottom = True,
-                   labeltop = False)
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-    for jd in apo_jd:
-        ax.axvline(x=jd2date(jd),color="darkgray",lw=0.7)
-    for jd in peri_jd:
-        ax.axvline(x=jd2date(jd),color="darkgray",ls="--",lw=0.7)
-    ax.text(.82, .96, 'Aphelion', ha='left', va='top', rotation=90, color="gray", fontsize="small", transform=ax.transAxes)
-    ax.text(.74, .96, 'Perihelion', ha='left', va='top', rotation=90, color="gray", fontsize="small", transform=ax.transAxes)
-    ax.text(.07, .92, r'$f_s = 262 \, ksps$', ha='left', va='top', color="firebrick", backgroundcolor="white", transform=ax.transAxes)
-    ax.text(.07, .83, r'$f_s = 524 \, ksps$', ha='left', va='top', color="teal", backgroundcolor="white", transform=ax.transAxes)
+    if not pres:
+        for jd in apo_jd:
+            ax.axvline(x=jd2date(jd),color="darkgray",lw=0.7)
+        for jd in peri_jd:
+            ax.axvline(x=jd2date(jd),color="darkgray",ls="--",lw=0.7)
+        ax.text(.82, .96, 'Aphelion', ha='left', va='top', rotation=90, color="gray", fontsize="small", transform=ax.transAxes)
+        ax.text(.74, .96, 'Perihelion', ha='left', va='top', rotation=90, color="gray", fontsize="small", transform=ax.transAxes)
+        ax.text(.07, .92, r'$f_s = 262 \, ksps$', ha='left', va='top', color="firebrick", backgroundcolor="white", transform=ax.transAxes)
+        ax.text(.07, .83, r'$f_s = 524 \, ksps$', ha='left', va='top', color="teal", backgroundcolor="white", transform=ax.transAxes)
     fig.tight_layout()
     fig.savefig(figures_location+'cnn_flux.png', format='png', dpi=600)
     fig.show()
