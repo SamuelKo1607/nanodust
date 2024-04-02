@@ -69,7 +69,8 @@ def plot_flux(days,
               styles = None,
               aspect = 1.2666,
               zoom = 1,
-              pres = False):
+              pres = False,
+              prescolor = "red"):
     """
     A plot of daily flux is made with the data from the provided days files.
 
@@ -93,6 +94,8 @@ def plot_flux(days,
         case 3x3 figsize is used.
     pres : bool, optional
         Whether to use the simplified plot, inteded for ppt inclusion.
+    prescolor : str, optional
+        The color of the points, in case simplified plot is used.
 
     Returns
     -------
@@ -116,7 +119,7 @@ def plot_flux(days,
             else:
                 colorcodes = np.append(colorcodes,"teal")
         else:
-            colorcodes = np.append(colorcodes,"red")
+            colorcodes = np.append(colorcodes,prescolor)
 
     fig, ax = plt.subplots(figsize=(3*aspect/zoom, 3/zoom))
     if pres:
@@ -543,7 +546,7 @@ if __name__ == "__main__":
                                                        ))
 
     plot_flux(load_all_days(),
-              aspect = 2)
+              aspect = 2, zoom=1, pres=True, prescolor="firebrick")
 
     plot_flux(load_all_days(),
               overplot=[bottom5, mean, top5],
