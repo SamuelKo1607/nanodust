@@ -10,10 +10,10 @@ from scipy.signal import sosfilt
 from scipy import stats
 import os
 
-from conversions import tt2000_to_date
+from conversions import tt2000_to_date, date_to_tt2000
 from conversions import YYYYMMDD2jd
 from conversions import date2jd
-from conversions import YYYYMMDD2date
+from conversions import YYYYMMDD2date, date2YYYYMMDD
 from nano_ephemeris import fetch_heliocentric_solo
 
 from paths import cdf_stat_location
@@ -872,6 +872,20 @@ def process_cdf(cdf_file):
                   v_theta)
 
     return day, impacts, missing_files
+
+
+def make_impacts_csv(list_of_impacts,
+                     file=os.path.join("998_generated",
+                                       "impacts",
+                                       "cnn_impacts.csv")):
+    with open(file, 'w', newline='') as csvfile:
+        csv_writer = csv.writer(csvfile)
+        csv_writer.writerow(["YYYYMMDD", "tt2000", "index"])
+        for impact in list_of_impacts:
+            csv_writer.writerow([impact.YYYYMMDD,
+                                 str(date_to_tt2000(impact.datetime)),
+                                 str(impact.index)])
+    print(str(file)+" saved")
 
 
 def main():
