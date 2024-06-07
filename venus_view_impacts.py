@@ -301,6 +301,7 @@ def plot_approach_profiles(approaches,
         a.set_ylim(bottom=0,top=top)
     ax[-1].set_xlabel("Days since "+target+" [day]")
     ax[len(ax)//2].set_ylabel("Impact rate [$day^{-1}$]")
+    fig.tight_layout()
     fig.savefig(figures_location+name,
                 format='png', dpi=600)
     fig.show()
@@ -371,6 +372,7 @@ def plot_venus_impacts(zoom=0.0005,
     ax.set_aspect(1)
     ax.set_xlabel("VSE X [km]")
     ax.set_ylabel("VSE Y [km]")
+    fig.tight_layout()
     fig.savefig(figures_location+'venus_approach_impacts.png',
                 format='png', dpi=600)
     fig.show()
