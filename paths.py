@@ -17,6 +17,7 @@ solo_ephemeris_file = os.path.join("data_synced","solo_fine_ephemeris_noheader.t
 venus_ephemeris_file = os.path.join("data_synced","venus_fine_ephemeris_noheader.txt")
 inla_results = os.path.join("998_generated","inla","")
 readable_data = os.path.join("data_synced","flux_readable.csv")
+isd_data = os.path.join("data_synced","isd_flux.csv")
 
 if __name__ == "__main__":
     print("data paths in your system:")

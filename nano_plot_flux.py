@@ -2,14 +2,17 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib as mpl
 import numpy as np
+import pandas as pd
 import datetime as dt
 from scipy import interpolate
 from scipy.signal import argrelextrema
 from scipy.signal import savgol_filter
+from scipy.interpolate import interp1d
 import os
 import glob
 
 from paths import solo_ephemeris_file
+from paths import isd_data
 
 from nano_load_days import load_all_days
 from nano_load_days import load_list
@@ -70,7 +73,9 @@ def plot_flux(days,
               aspect = 1.2666,
               zoom = 1,
               pres = False,
-              prescolor = "red"):
+              semilogy = False,
+              prescolor = "red",
+              text_tuples = None):
     """
     A plot of daily flux is made with the data from the provided days files.
 
@@ -80,7 +85,8 @@ def plot_flux(days,
         Measurement days, class Day from nano_load_days.
     figures_location : str, optional
         Where to put the wrawn figure. Default is "figures_location".
-    overplot : list of functions: np.array of dt.datetime -> np.array of float, optional
+    overplot : list of functions: np.array of dt.datetime -> 
+                np.array of float, optional 
         A list of functons that will be used to overplot over the data. 
         Default is None, in which case nothing is overplotted.
     styles : list of str, optional
@@ -94,8 +100,12 @@ def plot_flux(days,
         case 3x3 figsize is used.
     pres : bool, optional
         Whether to use the simplified plot, inteded for ppt inclusion.
+    semilogy : bool, optional
+        Wheter to show it semilogy.
     prescolor : str, optional
         The color of the points, in case simplified plot is used.
+    text_tuple : tuple or None, optional
+        The (x,y,"str",col) for an overplot.
 
     Returns
     -------
@@ -160,7 +170,11 @@ def plot_flux(days,
     ax.set_xticklabels(xlabels, rotation=60,
                       ha="right", rotation_mode='anchor')
     ax.tick_params(labelsize="medium")
-    ax.set_ylim(0,1400)
+    if semilogy:
+        ax.set_ylim(2,1500)
+        ax.set_yscale('log')
+    else:
+        ax.set_ylim(0,1400)
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
     if not pres:
         for jd in apo_jd:
@@ -171,6 +185,9 @@ def plot_flux(days,
         ax.text(.74, .96, 'Perihelion', ha='left', va='top', rotation=90, color="gray", fontsize="small", transform=ax.transAxes)
         ax.text(.07, .92, r'$f_s = 262 \, ksps$', ha='left', va='top', color="firebrick", backgroundcolor="white", transform=ax.transAxes)
         ax.text(.07, .83, r'$f_s = 524 \, ksps$', ha='left', va='top', color="teal", backgroundcolor="white", transform=ax.transAxes)
+    if text_tuples is not None:
+        for text_tuple in text_tuples:
+            ax.text(text_tuple[0],text_tuple[1],text_tuple[2],c=text_tuple[3])
     fig.tight_layout()
     fig.savefig(figures_location+'cnn_flux.png', format='png', dpi=600)
     fig.show()
@@ -545,12 +562,32 @@ if __name__ == "__main__":
                                                        os.path.join("data_synced","")
                                                        ))
 
+    isd_df = pd.read_csv(isd_data)
+
     plot_flux(load_all_days(),
               aspect = 2, zoom=1, pres=True, prescolor="firebrick")
 
     plot_flux(load_all_days(),
               overplot=[bottom5, mean, top5],
               styles=["k:","k-","k:"])
+
+    v_isd_function=np.vectorize(interp1d(isd_df["juldat"],
+                                         isd_df["isd_flux_solo_low"],
+                                         fill_value=0,kind=3))
+    v_isd_dt = lambda x : v_isd_function(date2jd(x))
+    plot_flux(load_all_days(),
+              overplot=[v_isd_dt,bottom5, mean, top5],
+              styles=["b","k:","k-","k:"],
+              aspect = 1.618, zoom=4/3, semilogy=True,
+              pres=True, prescolor="firebrick",
+              text_tuples=[(dt.datetime(2020,11,1),
+                           5,
+                           "ISD",
+                           "b"),
+                           (dt.datetime(2020,11,1),
+                                        700,
+                                        "SolO flux",
+                                        "k")])
 
     plot_approach_profiles(perihelia,
                            deltadays = 30,
