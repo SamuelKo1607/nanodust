@@ -73,6 +73,7 @@ def plot_flux(days,
               aspect = 1.2666,
               zoom = 1,
               pres = False,
+              groups = False,
               semilogy = False,
               prescolor = "red",
               text_tuples = None):
@@ -122,14 +123,28 @@ def plot_flux(days,
     err_plusminus_flux = get_errors(days)
 
     colorcodes = np.zeros(0,dtype=str)
-    for sampling_rate in sampling_rates:
-        if not pres:
-            if sampling_rate < 263000:
-                colorcodes = np.append(colorcodes,"firebrick")
+    if not groups:
+        for sampling_rate in sampling_rates:
+            if not pres:
+                if sampling_rate < 263000:
+                    colorcodes = np.append(colorcodes,"firebrick")
+                else:
+                    colorcodes = np.append(colorcodes,"teal")
             else:
-                colorcodes = np.append(colorcodes,"teal")
-        else:
-            colorcodes = np.append(colorcodes,prescolor)
+                colorcodes = np.append(colorcodes,prescolor)
+    else:
+        for date in dates:
+            if date < dt.date(2020,12,27):
+                colorcodes = np.append(colorcodes,"tab:blue")
+            elif date < dt.date(2021,8,9):
+                colorcodes = np.append(colorcodes,"tab:orange")
+            elif date < dt.date(2021,11,27):
+                colorcodes = np.append(colorcodes,"tab:green")
+            elif date < dt.date(2022,9,4):
+                colorcodes = np.append(colorcodes,"tab:red")
+            else:
+                colorcodes = np.append(colorcodes,"tab:purple")
+
 
     fig, ax = plt.subplots(figsize=(3*aspect/zoom, 3/zoom))
     if pres:
@@ -565,7 +580,10 @@ if __name__ == "__main__":
     isd_df = pd.read_csv(isd_data)
 
     plot_flux(load_all_days(),
-              aspect = 2, zoom=1, pres=True, prescolor="firebrick")
+              aspect = 1, zoom=1, pres=True, prescolor="firebrick")
+
+    plot_flux(load_all_days(),
+              aspect = 1, zoom=1, pres=True, groups=True, prescolor="firebrick")
 
     plot_flux(load_all_days(),
               overplot=[bottom5, mean, top5],
